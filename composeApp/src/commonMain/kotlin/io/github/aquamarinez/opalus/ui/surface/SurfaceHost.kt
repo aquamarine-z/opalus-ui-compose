@@ -1,16 +1,66 @@
 package io.github.aquamarinez.opalus.ui.surface
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.*
 import kotlinx.coroutines.CompletableDeferred
 
 
-val surfaceOrder = mutableStateListOf<String>()
-val surfaceRegistry = mutableStateMapOf<String, Surface<Any?>>()
-val surfaceStates = mutableStateMapOf<String, SurfaceState<Any?>>()
+internal val LocalSurfaceHost = compositionLocalOf<SurfaceController> {
+    error("No SurfaceController provided. Please wrap with SurfaceProvider.")
+}
 
-data class SurfaceState<T:Any?>(
+open class SurfaceController {
+    internal val surfaceOrder = mutableStateListOf<String>()
+    internal val surfaceRegistry = mutableStateMapOf<String, Surface<Any?>>()
+    internal val surfaceStates = mutableStateMapOf<String, SurfaceState<Any?>>()
+
+    fun clear() {
+        surfaceOrder.clear()
+        surfaceRegistry.clear()
+        surfaceStates.clear()
+    }
+
+    fun getSurface(id: String): Surface<Any?>? {
+        return surfaceRegistry[id]
+    }
+
+    fun removeSurface(id: String) {
+        surfaceRegistry.remove(id)
+    }
+
+    suspend fun <T> show(surface: Surface<T>): T? {
+
+
+        if (surfaceStates.containsKey(surface.id)) {
+            //Let the surface be visible
+            surfaceStates[surface.id]?.visible = true
+            return null
+        }
+        val deferred = CompletableDeferred<T?>()
+        val state =
+            SurfaceState<T>(visible = true, resolve = { value -> deferred.complete(value) }, id = surface.id, close = {
+                surfaceStates.remove(surface.id)
+                surfaceRegistry.remove(surface.id)
+                surfaceOrder.remove(surface.id)
+            }, hide = {
+                val state = surfaceStates[surface.id]!!
+                state.visible = false
+                surfaceStates[surface.id] = state
+            })
+        @Suppress("UNCHECKED_CAST")
+        surfaceStates[surface.id] = state as SurfaceState<Any?>
+        @Suppress("UNCHECKED_CAST")
+        surfaceRegistry[surface.id] = surface as Surface<Any?>
+        surfaceOrder.add(surface.id)
+        return deferred.await()
+    }
+}
+
+@Composable
+fun useSurface(): SurfaceController {
+    return LocalSurfaceHost.current
+}
+
+data class SurfaceState<T : Any?>(
     var visible: Boolean = false,
     val resolve: (value: T?) -> Unit,
     val id: String,
@@ -18,49 +68,18 @@ data class SurfaceState<T:Any?>(
     val hide: () -> Unit
 )
 
-class Surface<T:Any?>(
+class Surface<T : Any?>(
     val id: String, val content: @Composable (SurfaceState<T>) -> Unit
 ) {
     companion object {
-        private var nextId = 0
-        fun generateId(): String {
+        private var nextId = 0L
+        private fun generateId(): String {
             return "surface_${nextId++}"
         }
 
         fun <T> create(content: @Composable (SurfaceState<T>) -> Unit): Surface<T> {
-            val id = Surface.generateId()
+            val id = generateId()
             return Surface(id, content)
-        }
-
-        suspend fun <T> show(surface: Surface<T>): T? {
-            if (surfaceStates.containsKey(surface.id)) {
-                throw Exception("Surface ${surface.id} is already visible")
-            }
-            val deferred = CompletableDeferred<T?>()
-            val state = SurfaceState<T>(
-                visible = true,
-                resolve = { value -> deferred.complete(value) },
-                id = surface.id,
-                close = {
-                    surfaceStates.remove(surface.id)
-                    surfaceRegistry.remove(surface.id)
-                    surfaceOrder.remove(surface.id)  // 同时移除顺序
-                },
-                hide = {
-                    val state = surfaceStates[surface.id]!!
-                    state.visible = false
-                    surfaceStates[surface.id] = state
-                })
-            surfaceStates[surface.id] = state as SurfaceState<Any?>
-            surfaceRegistry[surface.id] = surface as Surface<Any?>
-            surfaceOrder.add(surface.id)  // 添加到底部，确保最后绘制（最上层）
-            return deferred.await()
-        }
-
-        fun remove(id: String) {
-            surfaceStates.remove(id)
-            surfaceRegistry.remove(id)
-            surfaceOrder.remove(id)
         }
     }
 
@@ -68,9 +87,20 @@ class Surface<T:Any?>(
 
 @Composable
 fun SurfaceHost(
-    content: @Composable () -> Unit
+    controller: SurfaceController = remember { SurfaceController() }, content: @Composable () -> Unit
 ) {
-    content()
+    CompositionLocalProvider(LocalSurfaceHost provides controller) {
+        content()
+        SurfaceRenderer()
+    }
+}
+
+@Composable
+internal fun SurfaceRenderer() {
+    val surfaceHost = LocalSurfaceHost.current
+    val surfaceOrder = surfaceHost.surfaceOrder
+    val surfaceRegistry = surfaceHost.surfaceRegistry
+    val surfaceStates = surfaceHost.surfaceStates
     surfaceOrder.forEach { id ->
         val surface = surfaceRegistry[id] ?: return@forEach
         val state = surfaceStates[id] ?: return@forEach
