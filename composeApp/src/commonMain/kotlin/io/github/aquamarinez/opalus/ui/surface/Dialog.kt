@@ -1,14 +1,13 @@
 package io.github.aquamarinez.opalus.ui.surface
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -16,8 +15,8 @@ data class CustomDialogOptions(
     val fadeInDuration: Duration = 150.milliseconds,
     val fadeOutDuration: Duration = 150.milliseconds,
     val properties: DialogProperties = DialogProperties(
-        dismissOnClickOutside = false,
-        usePlatformDefaultWidth = false,
+        dismissOnClickOutside = true,
+        usePlatformDefaultWidth = true,
         dismissOnBackPress = true,
     ),
 )
@@ -26,25 +25,32 @@ val SurfaceController.dialogs: Dialogs
     get() = Dialogs(this)
 
 class Dialogs(val controller: SurfaceController) {
-    suspend fun <T : Any?> custom(
+    suspend fun <T> custom(
         options: CustomDialogOptions = CustomDialogOptions(), content: @Composable (close: (value: T?) -> Unit) -> Unit
     ): T? {
-        val surface = Surface.create<T>() { state ->
-            val scope = rememberCoroutineScope()
-            var visible by remember { mutableStateOf(false) }
-            var result: T? by remember { mutableStateOf(null) }
-
-            val closeWithAnimation: (value: T?) -> Unit = { value ->
-                result = value
-                visible = false
-                scope.launch {
-                    delay(options.fadeOutDuration.inWholeMilliseconds)
-                    state.resolve(result)
-                    state.close()
+        val surface = Surface.create() { state ->
+            val visibleState = remember { MutableTransitionState(false) }
+            var firstRun by remember { mutableStateOf(true) }
+            SideEffect {
+                if (firstRun) {
+                    visibleState.targetState = true
+                    firstRun = false
                 }
             }
-            LaunchedEffect(Unit) {
-                visible = true
+            var result: T? by remember { mutableStateOf(null) }
+            val closeWithAnimation: (value: T?) -> Unit = { value ->
+                result = value
+                visibleState.targetState = false
+            }
+            LaunchedEffect(visibleState.currentState, visibleState.targetState, firstRun) {
+                if (visibleState.isIdle && !visibleState.targetState) {
+                    state.close()
+                    state.resolve(result)
+                }
+                if (!visibleState.targetState && !visibleState.currentState && !firstRun) {
+                    state.close()
+                    state.resolve(result)
+                }
             }
             Dialog(
                 onDismissRequest = {
@@ -53,8 +59,9 @@ class Dialogs(val controller: SurfaceController) {
                     }
                 }, properties = options.properties
             ) {
-                AnimatedVisibility(
-                    visible = visible,
+                key(state.id) {
+                    AnimatedVisibility(
+                        visibleState = visibleState,
                     enter = fadeIn(tween(options.fadeInDuration.inWholeMilliseconds.toInt())) + scaleIn(
                         initialScale = 0.8f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
                     ),
@@ -63,9 +70,11 @@ class Dialogs(val controller: SurfaceController) {
                     )
                 ) {
                     content(closeWithAnimation)
+                    }
                 }
+
             }
         }
-        return this.controller.show(surface)
+        return controller.show(surface)
     }
 }

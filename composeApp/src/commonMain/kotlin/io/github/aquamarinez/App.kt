@@ -9,10 +9,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import io.github.aquamarinez.opalus.ui.surface.SurfaceController
-import io.github.aquamarinez.opalus.ui.surface.SurfaceHost
-import io.github.aquamarinez.opalus.ui.surface.dialogs
-import io.github.aquamarinez.opalus.ui.surface.useSurface
+import androidx.compose.ui.window.DialogProperties
+import io.github.aquamarinez.opalus.ui.surface.*
 import kotlinx.coroutines.launch
 
 @Composable
@@ -43,19 +41,13 @@ fun App() {
                         Button(
                             onClick = {
                                 scope.launch {
-                                    // 递归方式：只有当前一个确认了，才会再调用自己打开下一个
-                                    fun loop() {
-                                        scope.launch {
-                                            val confirmed = showConfirmDialog(0,controller)
-                                            if (confirmed) {
-                                                println("open again")
-                                                loop()  // 再次打开同一个对话框
+                                    var value = showConfirmDialog(0, controller)
+                                    while (value) {
+                                        value = showConfirmDialog(0, controller)
                                             }
                                         }
-                                        
-                                    }
-                                    loop()
-                                }
+
+
                             }) {
                             Text("打开一个还有一个弹窗")
                         }
@@ -70,11 +62,18 @@ fun App() {
 }
 
 suspend fun showConfirmDialog(layer: Int, controller: SurfaceController): Boolean {
-    return controller.dialogs.custom<Boolean> { close ->
+    return controller.dialogs.custom<Boolean>(
+        options = CustomDialogOptions(
+            properties = DialogProperties(
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true
+            )
+        )
+    ) { close ->
         val scope = rememberCoroutineScope()
         Card(
 
-            modifier = Modifier.padding(24.dp).padding(24.dp).clip(RoundedCornerShape(16.dp))
+            modifier = Modifier.clip(RoundedCornerShape(16.dp))
         ) {
             Column(
                 modifier = Modifier.padding(24.dp)
