@@ -1,0 +1,110 @@
+import org.gradle.model.internal.core.ModelNodes.withType
+
+group = "io.github.aquamarinez"
+version = "0.1.0"
+plugins {
+    alias(libs.plugins.kotlinMultiplatform)
+    // 如果你希望纯 Android 项目也能直接依赖这个库（生成 AAR），可以取消下面这行的注释
+    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.composeCompiler)
+    id("maven-publish")
+}
+
+kotlin {
+    // Android
+    androidTarget()
+
+    // Desktop (JVM)
+    jvm("desktop")
+
+    // iOS 全系列（推荐这样写，覆盖真机 + 模拟器）
+    iosX64()               // 老 Intel Mac 模拟器（可选，如果你不需要可以删）
+    iosArm64()             // iPhone 真机
+    iosSimulatorArm64()    // Apple Silicon Mac 模拟器
+
+    // Web (JavaScript)
+    js(IR) {
+        browser()
+        binaries.executable()
+    }
+
+    // Web (WasmJs) - 实验性，但 Compose 已经支持得越来越好
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class) wasmJs {
+        browser()
+        binaries.executable()
+    }
+
+    sourceSets {
+        val commonMain by getting {
+            dependencies {
+                api(compose.runtime)
+                api(compose.foundation)
+                api(compose.material3)
+                api(compose.ui)
+                api(compose.components.resources)  // 如果你会用到资源，建议加上
+                // api(compose.components.uiToolingPreview) // 预览相关，通常只在 demo 中用
+            }
+        }
+
+        // 如果将来有平台特有实现，可以在这里添加
+        // val androidMain by getting { }
+        // val iosMain by getting { }
+        // val desktopMain by getting { }
+        // val jsMain by getting { }
+        // val wasmJsMain by getting { }
+    }
+}
+
+// 如果你取消了上面 androidLibrary 插件的注释，这里需要保留 android 块
+android {
+    namespace = "io.github.aquamarinez.opalus.ui"
+    compileSdk = libs.versions.android.compileSdk.get().toInt()
+
+    defaultConfig {
+        minSdk = libs.versions.android.minSdk.get().toInt()
+    }
+}
+publishing {
+    publications {
+        withType<MavenPublication>().configureEach {
+            // GitHub Packages 不要求，但推荐显式写
+            artifactId = "opalus-ui"
+            pom {
+                name.set("Opalus UI")
+                description.set("A Compose Multiplatform modal/surface UI library")
+                url.set("https://github.com/aquamarine-z/opalus-ui-compose")
+
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("https://opensource.org/licenses/MIT")
+                    }
+                }
+
+                developers {
+                    developer {
+                        id.set("aquamarinez")
+                        name.set("Aquamarinez")
+                    }
+                }
+
+                scm {
+                    url.set("https://github.com/aquamarine-z/opalus-ui-compose")
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/aquamarine-z/opalus-ui-compose")
+
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}

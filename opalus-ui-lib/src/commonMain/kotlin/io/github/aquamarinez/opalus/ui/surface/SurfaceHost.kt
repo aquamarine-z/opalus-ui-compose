@@ -1,6 +1,9 @@
 package io.github.aquamarinez.opalus.ui.surface
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -114,8 +117,11 @@ fun SurfaceHost(
     controller: SurfaceController = remember { SurfaceController() }, content: @Composable () -> Unit
 ) {
     CompositionLocalProvider(LocalSurfaceHost provides controller) {
-        content()
-        SurfaceRenderer()
+        Box(modifier = Modifier.fillMaxSize()) {
+            content()
+            SurfaceRenderer()
+        }
+        
     }
 }
 
@@ -125,12 +131,14 @@ internal fun SurfaceRenderer() {
     val surfaceOrder = surfaceHost.surfaceOrder
     val surfaceRegistry = surfaceHost.surfaceRegistry
     val surfaceStates = surfaceHost.surfaceStates
-    surfaceOrder.forEach { id ->
-        val surface = surfaceRegistry[id] ?: return@forEach
-        val state = surfaceStates[id] ?: return@forEach
-        key(id) {
-            surface.content(state)
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        surfaceOrder.forEach { id ->
+            val surface = surfaceRegistry[id] ?: return@forEach
+            val state = surfaceStates[id] ?: return@forEach
+            key(id) {
+                surface.content(state)
+            }
         }
-        
     }
 }
