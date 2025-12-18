@@ -14,10 +14,7 @@ import io.github.aquamarinez.opalus.ui.surface.*
 import kotlinx.coroutines.launch
 
 @Composable
-
 fun App() {
-
-
     MaterialTheme {
         val scope = rememberCoroutineScope()
         SurfaceHost {
