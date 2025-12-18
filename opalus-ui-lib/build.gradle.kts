@@ -1,5 +1,3 @@
-import org.gradle.model.internal.core.ModelNodes.withType
-
 group = "io.github.aquamarinez"
 version = "0.1.0"
 plugins {
@@ -65,6 +63,15 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInt()
     }
 }
+val githubActor = System.getenv("GITHUB_ACTOR")
+val githubToken = System.getenv("GITHUB_TOKEN")
+
+if (githubActor == null || githubToken == null) {
+    logger.warn("GitHub Packages credentials not found, publishing will fail if executed")
+}
+
+
+
 publishing {
     publications {
         withType<MavenPublication>().configureEach {
@@ -102,8 +109,8 @@ publishing {
             url = uri("https://maven.pkg.github.com/aquamarine-z/opalus-ui-compose")
 
             credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
+                username = githubActor ?: ""
+                password = githubToken ?: ""
             }
         }
     }
