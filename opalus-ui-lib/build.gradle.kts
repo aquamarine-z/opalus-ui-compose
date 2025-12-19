@@ -1,6 +1,6 @@
 import org.gradle.model.internal.core.ModelNodes.withType
 
-group = "io.github.aquamarinez"
+group = "io.github.opalusui"
 version = "0.1.0"
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -58,7 +58,7 @@ kotlin {
 
 // 如果你取消了上面 androidLibrary 插件的注释，这里需要保留 android 块
 android {
-    namespace = "io.github.aquamarinez.opalus.ui"
+    namespace = "io.github.opalusui.opalus.ui"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
