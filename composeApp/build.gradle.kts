@@ -54,7 +54,7 @@ kotlin {
             api(compose.material3)
             api(compose.ui)
             api(compose.components.resources)
-            implementation(libs.opalus.ui)
+            implementation(project(":opalus-ui-lib"))
             //implementation(compose.components.uiToolingPreview)
 
         }
@@ -69,11 +69,11 @@ kotlin {
 }
 
 android {
-    namespace = "io.github.aquamarinez"
+    namespace = "io.github.opalusui"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "io.github.aquamarinez"
+        applicationId = "io.github.opalusui"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
@@ -101,11 +101,11 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "io.github.aquamarinez.MainKt"
+        mainClass = "io.github.opalusui.MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "io.github.aquamarinez"
+            packageName = "io.github.opalusui"
             packageVersion = "1.0.0"
         }
     }

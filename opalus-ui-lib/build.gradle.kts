@@ -38,6 +38,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
+                //implementation(libs.androidx.material.icons.extended)
                 api(compose.runtime)
                 api(compose.foundation)
                 api(compose.material3)
