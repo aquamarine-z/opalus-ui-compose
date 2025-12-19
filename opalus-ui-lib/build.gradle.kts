@@ -1,4 +1,4 @@
-group = "io.github.aquamarinez"
+group = "io.github.aquamarine-z"
 version = "0.1.0"
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -58,24 +58,18 @@ kotlin {
 
 // 如果你取消了上面 androidLibrary 插件的注释，这里需要保留 android 块
 android {
-    namespace = "io.github.aquamarinez.opalus.ui"
+    namespace = "io.github.aquamarine-z.opalus.ui"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
     }
 }
-val githubActor = System.getenv("GITHUB_ACTOR")
-val githubToken = System.getenv("GITHUB_TOKEN")
-
-if (githubActor == null || githubToken == null) {
-    logger.warn("GitHub Packages credentials not found, publishing will fail if executed")
-}
 mavenPublishing {
     publishToMavenCentral()
-coordinates(group.toString(), "opalus-ui", version.toString())
-    signAllPublications()
 
+    signAllPublications()
+    coordinates(group.toString(), "opalus-ui", version.toString())
             pom {
                 name.set("Opalus UI")
                 description.set("A Compose Multiplatform modal/surface UI library")
