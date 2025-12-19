@@ -1,5 +1,3 @@
-import org.gradle.model.internal.core.ModelNodes.withType
-
 group = "io.github.opalusui"
 version = "0.1.0"
 plugins {
@@ -8,7 +6,9 @@ plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
-    id("maven-publish")
+    //id("maven-publish")
+    id("signing")
+    id("com.vanniktech.maven.publish") version "0.35.0"
 }
 
 kotlin {
@@ -65,46 +65,35 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInt()
     }
 }
-publishing {
-    publications {
-        withType<MavenPublication>().configureEach {
-            // GitHub Packages 不要求，但推荐显式写
-            artifactId = "opalus-ui"
-            pom {
-                name.set("Opalus UI")
-                description.set("A Compose Multiplatform modal/surface UI library")
-                url.set("https://github.com/aquamarine-z/opalus-ui-compose")
+mavenPublishing {
+    publishToMavenCentral()
 
-                licenses {
-                    license {
-                        name.set("MIT License")
-                        url.set("https://opensource.org/licenses/MIT")
-                    }
-                }
+    signAllPublications()
+    coordinates(group.toString(), "opalus-ui", version.toString())
+    pom {
+        name.set("Opalus UI")
+        description.set("A Compose Multiplatform modal/surface UI library")
+        url.set("https://github.com/aquamarine-z/opalus-ui-compose")
 
-                developers {
-                    developer {
-                        id.set("aquamarinez")
-                        name.set("Aquamarinez")
-                    }
-                }
-
-                scm {
-                    url.set("https://github.com/aquamarine-z/opalus-ui-compose")
-                }
+        licenses {
+            license {
+                name = "The Apache License, Version 2.0"
+                url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                distribution = "https://www.apache.org/licenses/LICENSE-2.0.txt"
             }
+        }
+
+        developers {
+            developer {
+                id.set("aquamarinez")
+                name.set("Aquamarinez")
+            }
+        }
+
+        scm {
+            url.set("https://github.com/aquamarine-z/opalus-ui-compose")
         }
     }
 
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/aquamarine-z/opalus-ui-compose")
 
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
-    }
 }
