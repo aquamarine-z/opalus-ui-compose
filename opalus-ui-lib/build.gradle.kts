@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     id("maven-publish")
+    id("signing")
 }
 
 kotlin {
@@ -84,8 +85,9 @@ publishing {
 
                 licenses {
                     license {
-                        name.set("MIT License")
-                        url.set("https://opensource.org/licenses/MIT")
+                        name = "The Apache License, Version 2.0"
+                        url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                        distribution = "https://www.apache.org/licenses/LICENSE-2.0.txt"
                     }
                 }
 
@@ -103,15 +105,14 @@ publishing {
         }
     }
 
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/aquamarine-z/opalus-ui-compose")
-
-            credentials {
-                username = githubActor ?: ""
-                password = githubToken ?: ""
-            }
-        }
-    }
+    
+}
+signing {
+    // 使用 Gradle 自动生成的 key
+    useInMemoryPgpKeys(
+        findProperty("signing.key") as String?,
+        findProperty("signing.password") as String?
+    )
+    // 给所有 publication 签名
+    sign(publishing.publications)
 }
