@@ -6,8 +6,9 @@ plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
-    id("maven-publish")
+    //id("maven-publish")
     id("signing")
+    id("com.vanniktech.maven.publish") version "0.35.0"
 }
 
 kotlin {
@@ -70,14 +71,11 @@ val githubToken = System.getenv("GITHUB_TOKEN")
 if (githubActor == null || githubToken == null) {
     logger.warn("GitHub Packages credentials not found, publishing will fail if executed")
 }
+mavenPublishing {
+    publishToMavenCentral()
+coordinates(group.toString(), "opalus-ui", version.toString())
+    signAllPublications()
 
-
-
-publishing {
-    publications {
-        withType<MavenPublication>().configureEach {
-            // GitHub Packages 不要求，但推荐显式写
-            artifactId = "opalus-ui"
             pom {
                 name.set("Opalus UI")
                 description.set("A Compose Multiplatform modal/surface UI library")
@@ -102,10 +100,8 @@ publishing {
                     url.set("https://github.com/aquamarine-z/opalus-ui-compose")
                 }
             }
-        }
-    }
+        
 
-    
 }
 signing {
     // 使用 Gradle 自动生成的 key
@@ -116,3 +112,5 @@ signing {
     // 给所有 publication 签名
     sign(publishing.publications)
 }
+
+
