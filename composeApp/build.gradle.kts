@@ -54,7 +54,7 @@ kotlin {
             api(compose.material3)
             api(compose.ui)
             api(compose.components.resources)
-            implementation(project(":opalus-ui-lib"))
+            implementation(libs.opalus.ui)
             //implementation(compose.components.uiToolingPreview)
 
         }
