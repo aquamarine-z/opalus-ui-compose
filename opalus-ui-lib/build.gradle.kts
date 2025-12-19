@@ -103,14 +103,4 @@ coordinates(group.toString(), "opalus-ui", version.toString())
         
 
 }
-signing {
-    // 使用 Gradle 自动生成的 key
-    useInMemoryPgpKeys(
-        findProperty("signing.key") as String?,
-        findProperty("signing.password") as String?
-    )
-    // 给所有 publication 签名
-    sign(publishing.publications)
-}
-
 
