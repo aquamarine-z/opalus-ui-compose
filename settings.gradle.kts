@@ -34,3 +34,4 @@ plugins {
 
 include(":composeApp")
 include(":opalus-ui-lib")
+include(":docs")
