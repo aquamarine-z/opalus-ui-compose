@@ -28,12 +28,7 @@ suspend fun <T> Dialogs.custom(
     val surface = Surface.create { state ->
         val visibleState = remember { MutableTransitionState(false) }
         var firstRun by remember { mutableStateOf(true) }
-        SideEffect {
-            if (firstRun) {
-                visibleState.targetState = true
-                firstRun = false
-            }
-        }
+        
         var result: T? by remember { mutableStateOf(null) }
         val closeWithAnimation: (value: T?) -> Unit = { value ->
             result = value
@@ -57,6 +52,12 @@ suspend fun <T> Dialogs.custom(
             }, properties = options.properties
         ) {
             key(state.id) {
+                SideEffect {
+                    if (firstRun) {
+                        visibleState.targetState = true
+                        firstRun = false
+                    }
+                }
                 AnimatedVisibility(
                     visibleState = visibleState,
                     enter = fadeIn(tween(options.fadeInDuration.inWholeMilliseconds.toInt())) + scaleIn(
