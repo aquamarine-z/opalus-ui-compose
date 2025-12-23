@@ -11,12 +11,12 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		91E4EDC2C88F8A80ECCF77EE /* Exceptions for "iosApp" folder in "iosApp" target */ = {
+		91E4EDC2C88F8A80ECCF77EE /* Exceptions for "iosApp" folder in "OpalusUI" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = C083D95F80E87AF781311070 /* iosApp */;
+			target = C083D95F80E87AF781311070 /* OpalusUI */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -29,7 +29,7 @@
 		F378D69648A524E1759F0671 /* iosApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				91E4EDC2C88F8A80ECCF77EE /* Exceptions for "iosApp" folder in "iosApp" target */,
+				91E4EDC2C88F8A80ECCF77EE /* Exceptions for "iosApp" folder in "OpalusUI" target */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -67,9 +67,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		C083D95F80E87AF781311070 /* iosApp */ = {
+		C083D95F80E87AF781311070 /* OpalusUI */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7950EF6D530DDD9E66354A34 /* Build configuration list for PBXNativeTarget "iosApp" */;
+			buildConfigurationList = 7950EF6D530DDD9E66354A34 /* Build configuration list for PBXNativeTarget "OpalusUI" */;
 			buildPhases = (
 				646ACCBEAA361D697536BC0F /* Compile Kotlin Framework */,
 				EB85995706D7FE86B4425BBB /* Sources */,
@@ -84,7 +84,7 @@
 			fileSystemSynchronizedGroups = (
 				F378D69648A524E1759F0671 /* iosApp */,
 			);
-			name = iosApp;
+			name = OpalusUI;
 			packageProductDependencies = (
 			);
 			productName = iosApp;
@@ -106,7 +106,7 @@
 					};
 				};
 			};
-			buildConfigurationList = B8C36617E02A5828552C2B5F /* Build configuration list for PBXProject "iosApp" */;
+			buildConfigurationList = B8C36617E02A5828552C2B5F /* Build configuration list for PBXProject "OpalusUI" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -120,7 +120,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				C083D95F80E87AF781311070 /* iosApp */,
+				C083D95F80E87AF781311070 /* OpalusUI */,
 			);
 		};
 /* End PBXProject section */
@@ -369,7 +369,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		7950EF6D530DDD9E66354A34 /* Build configuration list for PBXNativeTarget "iosApp" */ = {
+		7950EF6D530DDD9E66354A34 /* Build configuration list for PBXNativeTarget "OpalusUI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				463E89EAA4FFCA18F3378D65 /* Debug */,
@@ -378,7 +378,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		B8C36617E02A5828552C2B5F /* Build configuration list for PBXProject "iosApp" */ = {
+		B8C36617E02A5828552C2B5F /* Build configuration list for PBXProject "OpalusUI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				FC350F7E0282934FE9DA186C /* Debug */,
