@@ -1,5 +1,5 @@
 group = "io.github.opalusui"
-version = "0.1.1"
+version = "0.1.2"
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     // 如果你希望纯 Android 项目也能直接依赖这个库（生成 AAR），可以取消下面这行的注释
