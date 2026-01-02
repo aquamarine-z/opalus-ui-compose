@@ -1,14 +1,9 @@
-package io.github.opalusui.opalus.ui.surface.dialog
+package io.github.opalusui.opalus.ui.material3.dialog
 
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.dp
 
 class AlertDialogOptions : CustomDialogOptions()
-
 suspend fun Dialogs.alert(
     header: (@Composable () -> Unit) = {
         DialogHeader(
@@ -23,7 +18,7 @@ suspend fun Dialogs.alert(
         options = options
     ) { close ->
         DialogContent(
-            header = header, actions = arrayOf<@Composable () -> Unit>({
+            header = header, actions = listOf<@Composable () -> Unit>({
                 ok?.invoke(close) ?: DefaultOkButton(close)
             })
         ) {
@@ -48,13 +43,7 @@ suspend fun Dialogs.alert(
 private fun DefaultOkButton(
     close: (Unit) -> Unit, text: String = "OK"
 ) {
-    TextButton(
-        onClick = {
-            close(Unit)
-        }, shape = RoundedCornerShape(8.dp), contentPadding = ButtonDefaults.TextButtonContentPadding
-    ) {
-        Text(
-            text = text
-        )
+    DialogAction({ close(Unit) }) {
+        Text(text)
     }
 }

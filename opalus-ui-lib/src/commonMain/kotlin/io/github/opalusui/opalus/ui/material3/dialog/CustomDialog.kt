@@ -1,20 +1,34 @@
-package io.github.opalusui.opalus.ui.surface.dialog
+package io.github.opalusui.opalus.ui.material3.dialog
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.opalusui.opalus.ui.surface.Surface
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 
 open class CustomDialogOptions(
-    val fadeInDuration: Duration = 150.milliseconds,
-    val fadeOutDuration: Duration = 150.milliseconds,
+    val enterTransition: EnterTransition = fadeIn(
+        animationSpec = tween(
+            durationMillis = 200, easing = FastOutSlowInEasing
+        )
+    ) + slideInVertically(
+        initialOffsetY = { it / 12 }, // 轻微位移（≈ 8%）
+        animationSpec = tween(
+            durationMillis = 200, easing = FastOutSlowInEasing
+        )
+    ),
+    val exitTransition: ExitTransition = fadeOut(
+        animationSpec = tween(
+            durationMillis = 150, easing = FastOutSlowInEasing
+        )
+    ) + slideOutVertically(
+        targetOffsetY = { it / 12 }, animationSpec = tween(
+            durationMillis = 150, easing = FastOutSlowInEasing
+        )
+    ),
     val properties: DialogProperties = DialogProperties(
         dismissOnClickOutside = true,
         usePlatformDefaultWidth = true,
@@ -59,13 +73,7 @@ suspend fun <T> Dialogs.custom(
                     }
                 }
                 AnimatedVisibility(
-                    visibleState = visibleState,
-                    enter = fadeIn(tween(options.fadeInDuration.inWholeMilliseconds.toInt())) + scaleIn(
-                        initialScale = 0.8f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
-                    ),
-                    exit = fadeOut(tween(options.fadeOutDuration.inWholeMilliseconds.toInt())) + scaleOut(
-                        targetScale = 0.9f, animationSpec = tween(options.fadeOutDuration.inWholeMilliseconds.toInt())
-                    )
+                    visibleState = visibleState, enter = options.enterTransition, exit = options.exitTransition
                 ) {
                     content(closeWithAnimation)
                 }

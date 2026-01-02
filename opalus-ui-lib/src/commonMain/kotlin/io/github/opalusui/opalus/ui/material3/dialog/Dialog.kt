@@ -1,4 +1,4 @@
-package io.github.opalusui.opalus.ui.surface.dialog
+package io.github.opalusui.opalus.ui.material3.dialog
 
 import io.github.opalusui.opalus.ui.surface.SurfaceController
 

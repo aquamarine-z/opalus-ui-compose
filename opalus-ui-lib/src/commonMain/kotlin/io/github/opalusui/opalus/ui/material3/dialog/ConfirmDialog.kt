@@ -1,9 +1,7 @@
-package io.github.opalusui.opalus.ui.surface.dialog
+package io.github.opalusui.opalus.ui.material3.dialog
 
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.dp
 
 class ConfirmDialogOptions(
     val type: ConfirmDialogType = ConfirmDialogType.Common,
@@ -24,7 +22,7 @@ suspend fun Dialogs.confirm(
         options = options
     ) { close ->
         DialogContent(
-            header = header, actions = arrayOf<@Composable () -> Unit>({
+            header = header, actions = listOf<@Composable () -> Unit>({
                 cancel?.invoke(close) ?: DefaultCancelButton(close)
             }, {
                 confirm?.invoke(close) ?: DefaultConfirmButton(close, type = options.type)
@@ -49,30 +47,29 @@ suspend fun Dialogs.confirm(
     options = options
 )
 
-private val buttonPadding = ButtonDefaults.TextButtonContentPadding
-
 @Composable
-private fun DefaultConfirmButton(close: (Boolean?) -> Unit, text: String = "Confirm", type: ConfirmDialogType) {
-    Button(
-        onClick = { close(true) }, shape = RoundedCornerShape(8.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = when (type) {
-                ConfirmDialogType.Dangerous -> MaterialTheme.colorScheme.error
-                ConfirmDialogType.Common -> MaterialTheme.colorScheme.primary
-            }
-        ),
-        contentPadding = buttonPadding,
-
-        ) {
-        Text(text = text)
+private fun DefaultConfirmButton(
+    close: (Boolean?) -> Unit, text: String = "Confirm", type: ConfirmDialogType
+) {
+    val type: DialogActionType = when (type) {
+        ConfirmDialogType.Dangerous -> DialogActionType.Dangerous
+        ConfirmDialogType.Common -> DialogActionType.Common
+    }
+    DialogAction({
+        close(true)
+    }, type) {
+        Text(text)
     }
 }
 
+
 @Composable
-private fun DefaultCancelButton(close: (Boolean?) -> Unit, text: String = "Cancel") {
-    TextButton(
-        onClick = { close(false) }, shape = RoundedCornerShape(8.dp), contentPadding = buttonPadding
-    ) {
-        Text(text = text)
+private fun DefaultCancelButton(
+    close: (Boolean?) -> Unit, text: String = "Cancel",
+) {
+    DialogAction({
+        close(false)
+    }, DialogActionType.Common) {
+        Text(text)
     }
 }

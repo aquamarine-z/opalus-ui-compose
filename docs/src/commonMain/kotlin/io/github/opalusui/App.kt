@@ -11,9 +11,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import io.github.opalusui.opalus.ui.material3.dialog.DialogContent
+import io.github.opalusui.opalus.ui.material3.dialog.DialogHeader
+import io.github.opalusui.opalus.ui.material3.dialog.alert
+import io.github.opalusui.opalus.ui.material3.dialog.confirm
+import io.github.opalusui.opalus.ui.material3.dialog.custom
+import io.github.opalusui.opalus.ui.material3.dialog.dialogs
 import io.github.opalusui.opalus.ui.surface.SurfaceController
 import io.github.opalusui.opalus.ui.surface.SurfaceHost
-import io.github.opalusui.opalus.ui.surface.dialog.*
 import io.github.opalusui.opalus.ui.surface.useSurface
 import kotlinx.coroutines.launch
 
@@ -62,22 +67,22 @@ private suspend fun SurfaceController.showCustomDialog(): Boolean {
     return this.dialogs.custom<Boolean> { close ->
         DialogContent(
             header = {
-            DialogHeader {
-                Text("Title")
-            }
-        }, actions = arrayOf({
-            Button(onClick = {
-                close(false)
-            }) {
-                Text("取消")
-            }
-        }, {
-            Button(onClick = {
-                close(true)
-            }) {
-                Text("确定")
-            }
-        })
+                DialogHeader {
+                    Text("Title")
+                }
+            }, actions = arrayOf({
+                Button(onClick = {
+                    close(false)
+                }) {
+                    Text("取消")
+                }
+            }, {
+                Button(onClick = {
+                    close(true)
+                }) {
+                    Text("确定")
+                }
+            })
         ) {
             Text("你确定要删除此内容吗?")
         }
