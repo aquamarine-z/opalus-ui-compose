@@ -15,7 +15,7 @@ open class CustomDialogOptions(
             durationMillis = 200, easing = FastOutSlowInEasing
         )
     ) + slideInVertically(
-        initialOffsetY = { it / 12 }, // 轻微位移（≈ 8%）
+        initialOffsetY = { it / 12 },
         animationSpec = tween(
             durationMillis = 200, easing = FastOutSlowInEasing
         )
