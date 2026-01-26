@@ -12,14 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import io.github.opalusui.opalus.ui.material3.dialog.DialogAction
-import io.github.opalusui.opalus.ui.material3.dialog.DialogActionType
-import io.github.opalusui.opalus.ui.material3.dialog.DialogContent
-import io.github.opalusui.opalus.ui.material3.dialog.DialogHeader
-import io.github.opalusui.opalus.ui.material3.dialog.alert
-import io.github.opalusui.opalus.ui.material3.dialog.confirm
-import io.github.opalusui.opalus.ui.material3.dialog.custom
-import io.github.opalusui.opalus.ui.material3.dialog.dialogs
+import androidx.compose.ui.window.DialogProperties
+import io.github.opalusui.opalus.ui.material3.dialog.*
 import io.github.opalusui.opalus.ui.surface.SurfaceController
 import io.github.opalusui.opalus.ui.surface.SurfaceHost
 import io.github.opalusui.opalus.ui.surface.useSurface
@@ -54,8 +48,17 @@ fun App() {
                 Button(
                     onClick = {
                         scope.launch {
-                            val result =
-                                controller.dialogs.confirm("删除此文件", "你确定要删除此文件吗，此操作无法还原！")
+                            val result = controller.dialogs.confirm(
+                                "删除此文件",
+                                "你确定要删除此文件吗，此操作无法还原！",
+                                options = ConfirmDialogOptions().apply {
+                                    type = ConfirmDialogType.Common
+                                    properties = DialogProperties(
+                                        dismissOnClickOutside = true,
+                                        dismissOnBackPress = true,
+                                        usePlatformDefaultWidth = true,
+                                    )
+                                })
                             controller.dialogs.alert(
                                 title = "警告", message = "你选择了 : $result", okText = "OK"
                             )

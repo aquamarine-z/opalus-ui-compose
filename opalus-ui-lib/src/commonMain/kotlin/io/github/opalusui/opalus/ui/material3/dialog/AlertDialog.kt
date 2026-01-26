@@ -1,41 +1,12 @@
 package io.github.opalusui.opalus.ui.material3.dialog
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.window.DialogProperties
 
 class AlertDialogOptions(
-    enterTransition: EnterTransition = fadeIn(
-        animationSpec = tween(
-            durationMillis = 200, easing = FastOutSlowInEasing
-        )
-    ) + slideInVertically(
-        initialOffsetY = { it / 12 },
-        animationSpec = tween(
-            durationMillis = 200, easing = FastOutSlowInEasing
-        )
-    ),
-    exitTransition: ExitTransition = fadeOut(
-        animationSpec = tween(
-            durationMillis = 150, easing = FastOutSlowInEasing
-        )
-    ) + slideOutVertically(
-        targetOffsetY = { it / 12 }, animationSpec = tween(
-            durationMillis = 150, easing = FastOutSlowInEasing
-        )
-    ),
-    properties: DialogProperties = DialogProperties(
-        dismissOnClickOutside = true,
-        usePlatformDefaultWidth = true,
-        dismissOnBackPress = true,
-    ),
+
 ) : CustomDialogOptions(
-    enterTransition = enterTransition,
-    exitTransition = exitTransition,
-    properties = properties
+   
 )
 suspend fun Dialogs.alert(
     header: (@Composable () -> Unit) = {

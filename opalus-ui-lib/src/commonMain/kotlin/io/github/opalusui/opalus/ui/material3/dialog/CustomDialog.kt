@@ -10,7 +10,7 @@ import androidx.compose.ui.window.DialogProperties
 import io.github.opalusui.opalus.ui.surface.Surface
 
 open class CustomDialogOptions(
-    val enterTransition: EnterTransition = fadeIn(
+    var enterTransition: EnterTransition = fadeIn(
         animationSpec = tween(
             durationMillis = 200, easing = FastOutSlowInEasing
         )
@@ -20,7 +20,7 @@ open class CustomDialogOptions(
             durationMillis = 200, easing = FastOutSlowInEasing
         )
     ),
-    val exitTransition: ExitTransition = fadeOut(
+    var exitTransition: ExitTransition = fadeOut(
         animationSpec = tween(
             durationMillis = 150, easing = FastOutSlowInEasing
         )
@@ -29,7 +29,7 @@ open class CustomDialogOptions(
             durationMillis = 150, easing = FastOutSlowInEasing
         )
     ),
-    val properties: DialogProperties = DialogProperties(
+    var properties: DialogProperties = DialogProperties(
         dismissOnClickOutside = true,
         usePlatformDefaultWidth = true,
         dismissOnBackPress = true,
