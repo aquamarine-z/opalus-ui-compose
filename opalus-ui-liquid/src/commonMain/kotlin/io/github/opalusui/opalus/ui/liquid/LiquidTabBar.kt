@@ -93,7 +93,7 @@ fun <T> LiquidTabBar(
                                     state.onPointerMove(currentX, totalW, tabWidth, padHorizontalPx, isLtr)
                                 }
                             } finally {
-                                // 3. 鼠标/手指松开或手势被拦截：依据最后停留的区域决定目标槽位并触发回调，确保状态必定复位
+                                // 3. 鼠标松开或手势中断：依据手指/鼠标光标最后停留的区域决定目标槽位并触发回调，保证吸附
                                 state.onPointerUp(
                                     lastX = lastX,
                                     totalWidth = totalW,

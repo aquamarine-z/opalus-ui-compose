@@ -26,15 +26,10 @@ class LiquidTabBarState(
         visibilityThreshold = physics.dragVisibilityThreshold,
         initialScale = 1f,
         pressedScale = physics.platterActiveScale,
-        flightProgress = physics.flightProgress,
-        dockingThreshold = physics.dockingThreshold,
         onDragStarted = {},
         onDragStopped = {},
         onDrag = { _, _ -> }
     )
-
-    val interactionState: LiquidInteractionState
-        get() = dampedAnimation.interactionState
 
     val animatedValue: Float
         get() = dampedAnimation.value
@@ -108,9 +103,9 @@ class LiquidTabBarState(
         padHorizontalPx: Float,
         isLtr: Boolean
     ) {
+        dampedAnimation.press()
         val target = computeTargetFromPointer(x, totalWidth, tabWidth, padHorizontalPx, isLtr)
-        val targetSlot = computeSlotFromPointer(x, totalWidth, tabWidth, padHorizontalPx, isLtr)
-        dampedAnimation.onPointerDown(target, targetSlot.toFloat())
+        dampedAnimation.updateValue(target)
     }
 
     /**
@@ -124,7 +119,7 @@ class LiquidTabBarState(
         isLtr: Boolean
     ) {
         val target = computeTargetFromPointer(x, totalWidth, tabWidth, padHorizontalPx, isLtr)
-        dampedAnimation.onPointerMove(target)
+        dampedAnimation.updateValue(target)
     }
 
     /**
@@ -140,7 +135,7 @@ class LiquidTabBarState(
     ) {
         val finalIndex = computeSlotFromPointer(lastX, totalWidth, tabWidth, padHorizontalPx, isLtr)
         currentIndex = finalIndex
-        dampedAnimation.onPointerUp(finalIndex.toFloat())
+        dampedAnimation.animateToValue(finalIndex.toFloat())
         onTabSelected(finalIndex)
     }
 
