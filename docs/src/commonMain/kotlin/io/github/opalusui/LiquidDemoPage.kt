@@ -621,7 +621,9 @@ val customOptics = LiquidTabBarDefaults.optics(
     val velocityHorizontalFactor: Float = 0.75f,
     val velocityVerticalFactor: Float = 0.25f,
     val maxVelocityCoerce: Float = 0.2f,
-    val dragVisibilityThreshold: Float = 0.001f
+    val dragVisibilityThreshold: Float = 0.001f,
+    val flightProgress: Float = 0.65f,
+    val dockingThreshold: Float = 0.9f
 )""",
             description = "Defines the physical kinematics governing drag damping, spring stiffness, rubber-band resistance at container borders, and velocity-driven stretch-and-squash aspect ratio deformation.",
             parameters = listOf(
@@ -633,7 +635,9 @@ val customOptics = LiquidTabBarDefaults.optics(
                 ParamItem("indicatorActiveScale", "Float", "1.05f", "Scale applied to the fluid droplet during drag."),
                 ParamItem("velocityHorizontalFactor", "Float", "0.75f", "Horizontal aspect-ratio elongation driven by drag velocity."),
                 ParamItem("velocityVerticalFactor", "Float", "0.25f", "Vertical aspect-ratio compression driven by drag velocity."),
-                ParamItem("maxVelocityCoerce", "Float", "0.2f", "Clamp limit preventing extreme distortion during fast flicks.")
+                ParamItem("maxVelocityCoerce", "Float", "0.2f", "Clamp limit preventing extreme distortion during fast flicks."),
+                ParamItem("flightProgress", "Float", "0.65f", "Semi-active baseline progress maintained while traveling across tabs to preserve lens optics."),
+                ParamItem("dockingThreshold", "Float", "0.9f", "Remaining distance threshold within which the traveling droplet smoothly settles into the target slot.")
             ),
             codeExample = """val bouncyPhysics = LiquidTabBarDefaults.physics(
     maxOverhang = 0.5f,

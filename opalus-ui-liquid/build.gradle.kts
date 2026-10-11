@@ -1,5 +1,5 @@
 group = "io.github.opalusui"
-version = "0.2.1"
+version = "0.2.2"
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)

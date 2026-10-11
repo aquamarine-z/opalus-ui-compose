@@ -55,7 +55,7 @@ enum class NavDestination(val title: String, val badge: String) {
     OVERVIEW("Overview", "Start"),
     LIQUID("Liquid Tab Bar", "HIG 27"),
     DIALOGS("Dialogs System", "Core"),
-    INSTALLATION("Installation", "v0.2.1")
+    INSTALLATION("Installation", "v0.2.2")
 }
 
 @Composable
@@ -291,7 +291,7 @@ private fun M3TopAppBar(
                         letterSpacing = (-0.5).sp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    M3Badge("v0.2.1", isPrimary = true)
+                    M3Badge("v0.2.2", isPrimary = true)
                 }
                 if (!isMobile) {
                     Text(
@@ -362,7 +362,7 @@ private fun M3SidebarContent(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    M3Badge("v0.2.1", isPrimary = true)
+                    M3Badge("v0.2.2", isPrimary = true)
                 }
                 IconButton(onClick = onClose) {
                     M3CloseIcon(tint = MaterialTheme.colorScheme.onSurfaceVariant)

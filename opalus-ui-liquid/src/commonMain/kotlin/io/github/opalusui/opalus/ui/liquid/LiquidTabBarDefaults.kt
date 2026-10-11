@@ -71,7 +71,9 @@ data class LiquidTabBarPhysics(
     val velocityHorizontalFactor: Float = 0.75f,
     val velocityVerticalFactor: Float = 0.25f,
     val maxVelocityCoerce: Float = 0.2f,
-    val dragVisibilityThreshold: Float = 0.001f
+    val dragVisibilityThreshold: Float = 0.001f,
+    val flightProgress: Float = 0.65f,
+    val dockingThreshold: Float = 0.9f
 )
 
 /**
@@ -171,7 +173,9 @@ object LiquidTabBarDefaults {
         velocityHorizontalFactor: Float = 0.75f,
         velocityVerticalFactor: Float = 0.25f,
         maxVelocityCoerce: Float = 0.2f,
-        dragVisibilityThreshold: Float = 0.001f
+        dragVisibilityThreshold: Float = 0.001f,
+        flightProgress: Float = 0.65f,
+        dockingThreshold: Float = 0.9f
     ): LiquidTabBarPhysics = LiquidTabBarPhysics(
         maxOverhang = maxOverhang,
         overhangResistance = overhangResistance,
@@ -182,6 +186,8 @@ object LiquidTabBarDefaults {
         velocityHorizontalFactor = velocityHorizontalFactor,
         velocityVerticalFactor = velocityVerticalFactor,
         maxVelocityCoerce = maxVelocityCoerce,
-        dragVisibilityThreshold = dragVisibilityThreshold
+        dragVisibilityThreshold = dragVisibilityThreshold,
+        flightProgress = flightProgress,
+        dockingThreshold = dockingThreshold
     )
 }
