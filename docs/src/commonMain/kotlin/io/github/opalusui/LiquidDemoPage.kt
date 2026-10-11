@@ -622,10 +622,15 @@ val customOptics = LiquidTabBarDefaults.optics(
     val velocityVerticalFactor: Float = 0.25f,
     val maxVelocityCoerce: Float = 0.2f,
     val dragVisibilityThreshold: Float = 0.001f,
-    val flightProgress: Float = 0.65f,
-    val dockingThreshold: Float = 0.9f
+    val dragDampingRatio: Float = 0.85f,
+    val dragStiffness: Float = 950f,
+    val growDampingRatio: Float = 0.76f,
+    val growStiffness: Float = 1400f,
+    val shrinkDampingRatio: Float = 0.85f,
+    val shrinkStiffness: Float = 420f,
+    val dockingShrinkThreshold: Float = 0.28f
 )""",
-            description = "Defines the physical kinematics governing drag damping, spring stiffness, rubber-band resistance at container borders, and velocity-driven stretch-and-squash aspect ratio deformation.",
+            description = "Defines the physical kinematics governing drag damping, spring stiffness, rubber-band resistance at container borders, grow/shrink speeds, and velocity-driven stretch-and-squash aspect ratio deformation.",
             parameters = listOf(
                 ParamItem("maxOverhang", "Float", "0.38f", "Maximum fraction of tab width the droplet can stretch past the first or last tab."),
                 ParamItem("overhangResistance", "Float", "1.5f", "Rubber-band exponent dampening pointer drag outside boundary slots."),
@@ -636,13 +641,16 @@ val customOptics = LiquidTabBarDefaults.optics(
                 ParamItem("velocityHorizontalFactor", "Float", "0.75f", "Horizontal aspect-ratio elongation driven by drag velocity."),
                 ParamItem("velocityVerticalFactor", "Float", "0.25f", "Vertical aspect-ratio compression driven by drag velocity."),
                 ParamItem("maxVelocityCoerce", "Float", "0.2f", "Clamp limit preventing extreme distortion during fast flicks."),
-                ParamItem("flightProgress", "Float", "0.65f", "Semi-active baseline progress maintained while traveling across tabs to preserve lens optics."),
-                ParamItem("dockingThreshold", "Float", "0.9f", "Remaining distance threshold within which the traveling droplet smoothly settles into the target slot.")
+                ParamItem("dragDampingRatio / dragStiffness", "Float", "0.85f / 950f", "Spring physics for droplet transit motion, providing fluid momentum."),
+                ParamItem("growDampingRatio / growStiffness", "Float", "0.76f / 1400f", "High-speed snappy expansion dynamics when pressed."),
+                ParamItem("shrinkDampingRatio / shrinkStiffness", "Float", "0.85f / 420f", "Soft, gradual easing dynamics when settling into a docked slot."),
+                ParamItem("dockingShrinkThreshold", "Float", "0.28f", "Distance threshold to target slot before the traveling droplet begins shrinking.")
             ),
-            codeExample = """val bouncyPhysics = LiquidTabBarDefaults.physics(
-    maxOverhang = 0.5f,
-    velocityHorizontalFactor = 1.0f,
-    activeItemScale = 1.2f
+            codeExample = """val fluidPhysics = LiquidTabBarDefaults.physics(
+    growStiffness = 1500f,
+    shrinkStiffness = 380f,
+    dockingShrinkThreshold = 0.25f,
+    dragDampingRatio = 0.82f
 )"""
         )
 

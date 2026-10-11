@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.lerp
+import kotlin.math.abs
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -97,20 +98,11 @@ internal fun LiquidSelectionIndicator(
                     scaleX = scale
                     scaleY = scale
                     if (progress > 0.001f) {
-                        val velocity = (state.velocity / 10f) * progress
-                        val xFactor = (velocity * physics.velocityHorizontalFactor)
-                            .fastCoerceIn(
-                                -physics.maxVelocityCoerce,
-                                physics.maxVelocityCoerce
-                            )
-                        val yFactor = (velocity * physics.velocityVerticalFactor)
-                            .fastCoerceIn(
-                                -physics.maxVelocityCoerce,
-                                physics.maxVelocityCoerce
-                            )
-                        val denomX = (1f - xFactor).coerceAtLeast(0.1f)
-                        scaleX /= denomX
-                        scaleY *= (1f - yFactor).coerceAtLeast(0.1f)
+                        val speed = (abs(state.velocity) / 6f) * progress
+                        val stretch = (speed * physics.velocityHorizontalFactor)
+                            .coerceIn(0f, physics.maxVelocityCoerce)
+                        scaleX *= (1f + stretch)
+                        scaleY *= (1f - stretch * physics.velocityVerticalFactor).coerceAtLeast(0.7f)
                     }
                 },
                 onDrawSurface = {

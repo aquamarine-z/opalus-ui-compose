@@ -12,6 +12,7 @@ import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -26,21 +27,24 @@ class DampedDragAnimation(
     val visibilityThreshold: Float,
     val initialScale: Float,
     val pressedScale: Float,
-    val onDragStarted: DampedDragAnimation.(position: Offset) -> Unit,
-    val onDragStopped: DampedDragAnimation.() -> Unit,
-    val onDrag: DampedDragAnimation.(size: IntSize, dragAmount: Offset) -> Unit,
+    val physics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics(),
+    val onDragStarted: DampedDragAnimation.(position: Offset) -> Unit = {},
+    val onDragStopped: DampedDragAnimation.() -> Unit = {},
+    val onDrag: DampedDragAnimation.(size: IntSize, dragAmount: Offset) -> Unit = { _, _ -> },
 ) {
 
     private val valueAnimationSpec =
-        spring(1f, 1000f, visibilityThreshold)
+        spring(physics.dragDampingRatio, physics.dragStiffness, visibilityThreshold)
     private val velocityAnimationSpec =
-        spring(0.5f, 300f, visibilityThreshold * 10f)
-    private val pressProgressAnimationSpec =
-        spring(1f, 1000f, 0.001f)
+        spring(0.65f, 380f, visibilityThreshold * 10f)
+    private val growProgressAnimationSpec =
+        spring(physics.growDampingRatio, physics.growStiffness, 0.001f)
+    private val shrinkProgressAnimationSpec =
+        spring(physics.shrinkDampingRatio, physics.shrinkStiffness, 0.001f)
     private val scaleXAnimationSpec =
-        spring(0.6f, 250f, 0.001f)
+        spring(0.65f, 280f, 0.001f)
     private val scaleYAnimationSpec =
-        spring(0.7f, 250f, 0.001f)
+        spring(0.70f, 280f, 0.001f)
 
     private val valueAnimation =
         Animatable(initialValue, visibilityThreshold)
@@ -96,7 +100,7 @@ class DampedDragAnimation(
         val token = ++animationToken
         pressJob = animationScope.launch {
             launch {
-                pressProgressAnimation.animateTo(1f, pressProgressAnimationSpec)
+                pressProgressAnimation.animateTo(1f, growProgressAnimationSpec)
             }
             launch {
                 scaleXAnimation.animateTo(pressedScale, scaleXAnimationSpec)
@@ -128,25 +132,28 @@ class DampedDragAnimation(
 
         snapJob = animationScope.launch {
             try {
-                launch { scaleXAnimation.animateTo(initialScale, scaleXAnimationSpec) }
-                launch { scaleYAnimation.animateTo(initialScale, scaleYAnimationSpec) }
-                launch { velocityAnimation.animateTo(0f, velocityAnimationSpec) }
+                coroutineScope {
+                    launch { scaleXAnimation.animateTo(initialScale, scaleXAnimationSpec) }
+                    launch { scaleYAnimation.animateTo(initialScale, scaleYAnimationSpec) }
+                    launch { velocityAnimation.animateTo(0f, velocityAnimationSpec) }
 
-                launch {
-                    val initialDist = abs(valueAnimation.value - target)
-                    if (initialDist > 0.25f) {
-                        val threshold = (valueRange.endInclusive - valueRange.start) * 0.15f
-                        withTimeoutOrNull(600L) {
-                            snapshotFlow { valueAnimation.value }
-                                .filter { abs(it - target) < threshold }
-                                .first()
+                    launch {
+                        val initialDist = abs(valueAnimation.value - target)
+                        if (initialDist > physics.dockingShrinkThreshold) {
+                            withTimeoutOrNull(600L) {
+                                snapshotFlow { valueAnimation.value }
+                                    .filter { abs(it - target) < physics.dockingShrinkThreshold }
+                                    .first()
+                            }
+                        }
+                        pressProgressAnimation.animateTo(0f, shrinkProgressAnimationSpec)
+                    }
+
+                    launch {
+                        valueAnimation.animateTo(target, valueAnimationSpec) {
+                            updateVelocity()
                         }
                     }
-                    pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec)
-                }
-
-                valueAnimation.animateTo(target, valueAnimationSpec) {
-                    updateVelocity()
                 }
             } finally {
                 // 核心保障：手指松开吸附 item 的时候必须 100% 还原到最开始 inactive 的状态

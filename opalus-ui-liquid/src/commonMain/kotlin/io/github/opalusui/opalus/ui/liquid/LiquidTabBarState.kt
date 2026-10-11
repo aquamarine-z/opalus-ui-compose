@@ -26,6 +26,7 @@ class LiquidTabBarState(
         visibilityThreshold = physics.dragVisibilityThreshold,
         initialScale = 1f,
         pressedScale = physics.platterActiveScale,
+        physics = physics,
         onDragStarted = {},
         onDragStopped = {},
         onDrag = { _, _ -> }

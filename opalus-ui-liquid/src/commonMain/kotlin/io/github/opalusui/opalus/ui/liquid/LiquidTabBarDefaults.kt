@@ -71,7 +71,22 @@ data class LiquidTabBarPhysics(
     val velocityHorizontalFactor: Float = 0.75f,
     val velocityVerticalFactor: Float = 0.25f,
     val maxVelocityCoerce: Float = 0.2f,
-    val dragVisibilityThreshold: Float = 0.001f
+    val dragVisibilityThreshold: Float = 0.001f,
+
+    // 水滴位移物理参数：0.85f 阻尼比赋予运动轻微水体涌动与惯性弹性
+    val dragDampingRatio: Float = 0.85f,
+    val dragStiffness: Float = 950f,
+
+    // 水滴按下变大速度与弹性：1400f 更高速度迅速响应，0.76f 阻尼比呈现水珠饱满弹性
+    val growDampingRatio: Float = 0.76f,
+    val growStiffness: Float = 1400f,
+
+    // 水滴吸附变小速度与弹性：420f 减小速度柔和收拢，0.85f 阻尼比
+    val shrinkDampingRatio: Float = 0.85f,
+    val shrinkStiffness: Float = 420f,
+
+    // 吸附 item 时开始变小的距离阈值 (以 Tab 槽位跨度归一化单位计)
+    val dockingShrinkThreshold: Float = 0.28f
 )
 
 /**
@@ -171,7 +186,14 @@ object LiquidTabBarDefaults {
         velocityHorizontalFactor: Float = 0.75f,
         velocityVerticalFactor: Float = 0.25f,
         maxVelocityCoerce: Float = 0.2f,
-        dragVisibilityThreshold: Float = 0.001f
+        dragVisibilityThreshold: Float = 0.001f,
+        dragDampingRatio: Float = 0.85f,
+        dragStiffness: Float = 950f,
+        growDampingRatio: Float = 0.76f,
+        growStiffness: Float = 1400f,
+        shrinkDampingRatio: Float = 0.85f,
+        shrinkStiffness: Float = 420f,
+        dockingShrinkThreshold: Float = 0.28f
     ): LiquidTabBarPhysics = LiquidTabBarPhysics(
         maxOverhang = maxOverhang,
         overhangResistance = overhangResistance,
@@ -182,6 +204,13 @@ object LiquidTabBarDefaults {
         velocityHorizontalFactor = velocityHorizontalFactor,
         velocityVerticalFactor = velocityVerticalFactor,
         maxVelocityCoerce = maxVelocityCoerce,
-        dragVisibilityThreshold = dragVisibilityThreshold
+        dragVisibilityThreshold = dragVisibilityThreshold,
+        dragDampingRatio = dragDampingRatio,
+        dragStiffness = dragStiffness,
+        growDampingRatio = growDampingRatio,
+        growStiffness = growStiffness,
+        shrinkDampingRatio = shrinkDampingRatio,
+        shrinkStiffness = shrinkStiffness,
+        dockingShrinkThreshold = dockingShrinkThreshold
     )
 }
