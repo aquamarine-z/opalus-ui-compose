@@ -624,13 +624,17 @@ val customOptics = LiquidTabBarDefaults.optics(
     val dragVisibilityThreshold: Float = 0.001f,
     val dragDampingRatio: Float = 0.85f,
     val dragStiffness: Float = 950f,
-    val growDampingRatio: Float = 0.76f,
-    val growStiffness: Float = 1400f,
-    val shrinkDampingRatio: Float = 0.85f,
+    val dockingDampingRatio: Float = 0.62f,
+    val dockingStiffness: Float = 600f,
+    val dockingInertiaFactor: Float = 1.0f,
+    val growDampingRatio: Float = 0.68f,
+    val growStiffness: Float = 1350f,
+    val shrinkDampingRatio: Float = 0.65f,
     val shrinkStiffness: Float = 420f,
-    val dockingShrinkThreshold: Float = 0.28f
+    val dropletElasticity: Float = 0.35f,
+    val dockingShrinkThreshold: Float = 0.35f
 )""",
-            description = "Defines the physical kinematics governing drag damping, spring stiffness, rubber-band resistance at container borders, grow/shrink speeds, and velocity-driven stretch-and-squash aspect ratio deformation.",
+            description = "Defines the physical kinematics governing drag damping, spring stiffness, rubber-band resistance at container borders, grow/shrink speeds, docking inertia deviation, and droplet squash-and-stretch elasticity.",
             parameters = listOf(
                 ParamItem("maxOverhang", "Float", "0.38f", "Maximum fraction of tab width the droplet can stretch past the first or last tab."),
                 ParamItem("overhangResistance", "Float", "1.5f", "Rubber-band exponent dampening pointer drag outside boundary slots."),
@@ -641,16 +645,19 @@ val customOptics = LiquidTabBarDefaults.optics(
                 ParamItem("velocityHorizontalFactor", "Float", "0.75f", "Horizontal aspect-ratio elongation driven by drag velocity."),
                 ParamItem("velocityVerticalFactor", "Float", "0.25f", "Vertical aspect-ratio compression driven by drag velocity."),
                 ParamItem("maxVelocityCoerce", "Float", "0.2f", "Clamp limit preventing extreme distortion during fast flicks."),
-                ParamItem("dragDampingRatio / dragStiffness", "Float", "0.85f / 950f", "Spring physics for droplet transit motion, providing fluid momentum."),
-                ParamItem("growDampingRatio / growStiffness", "Float", "0.76f / 1400f", "High-speed snappy expansion dynamics when pressed."),
-                ParamItem("shrinkDampingRatio / shrinkStiffness", "Float", "0.85f / 420f", "Soft, gradual easing dynamics when settling into a docked slot."),
-                ParamItem("dockingShrinkThreshold", "Float", "0.28f", "Distance threshold to target slot before the traveling droplet begins shrinking.")
+                ParamItem("dragDampingRatio / dragStiffness", "Float", "0.85f / 950f", "Spring physics for droplet transit motion during pointer drag."),
+                ParamItem("dockingDampingRatio / dockingStiffness", "Float", "0.62f / 600f", "Under-damped spring governing inertial entry overshoot (left entry leans right, right entry leans left)."),
+                ParamItem("dockingInertiaFactor", "Float", "1.0f", "Inertial impulse multiplier applied to fling velocity and docking displacement."),
+                ParamItem("growDampingRatio / growStiffness", "Float", "0.68f / 1350f", "High-speed snappy expansion dynamics with liquid surface tension bounce."),
+                ParamItem("shrinkDampingRatio / shrinkStiffness", "Float", "0.65f / 420f", "Soft, gradual easing dynamics when settling into a docked slot with elastic rebound."),
+                ParamItem("dropletElasticity", "Float", "0.35f", "Magnitude of jelly squash-and-stretch volume-conserving wobble when shrinking to rest."),
+                ParamItem("dockingShrinkThreshold", "Float", "0.35f", "Distance threshold to target slot before the traveling droplet begins shrinking.")
             ),
             codeExample = """val fluidPhysics = LiquidTabBarDefaults.physics(
-    growStiffness = 1500f,
-    shrinkStiffness = 380f,
-    dockingShrinkThreshold = 0.25f,
-    dragDampingRatio = 0.82f
+    dockingDampingRatio = 0.58f,
+    dockingInertiaFactor = 1.2f,
+    dropletElasticity = 0.45f,
+    shrinkDampingRatio = 0.62f
 )"""
         )
 

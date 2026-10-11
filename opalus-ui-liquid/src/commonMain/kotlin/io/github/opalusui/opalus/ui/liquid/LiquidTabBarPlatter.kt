@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.lerp
+import kotlin.math.abs
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -87,23 +88,26 @@ internal fun <T> LiquidTabBarPlatter(
             modifier = Modifier
                 .fillMaxSize()
                 .drawWithContent {
-                    val progress = state.pressProgress
+                    val rawProgress = state.pressProgress
+                    val visualProgress = rawProgress.coerceIn(0f, 1f)
                     val currentDropletHeight = lerp(
                         dimensions.indicatorIdleHeight.toPx(),
                         dimensions.indicatorActiveHeight.toPx(),
-                        progress
+                        rawProgress
                     )
-                    val scale = lerp(1f, physics.indicatorActiveScale, progress)
+                    val scale = lerp(1f, physics.indicatorActiveScale, visualProgress)
                     var scaleX = scale
-                    if (progress > 0.001f) {
-                        val velocity = (state.velocity / 10f) * progress
-                        val xFactor = (velocity * physics.velocityHorizontalFactor)
-                            .fastCoerceIn(
-                                -physics.maxVelocityCoerce,
-                                physics.maxVelocityCoerce
-                            )
-                        val denomX = (1f - xFactor).coerceAtLeast(0.1f)
-                        scaleX /= denomX
+
+                    if (rawProgress < 0f && physics.dropletElasticity > 0f) {
+                        val rebound = -rawProgress * physics.dropletElasticity
+                        scaleX *= (1f + rebound)
+                    }
+
+                    if (visualProgress > 0.001f) {
+                        val speed = (abs(state.velocity) / 6f) * visualProgress
+                        val stretch = (speed * physics.velocityHorizontalFactor)
+                            .coerceIn(0f, physics.maxVelocityCoerce)
+                        scaleX *= (1f + stretch)
                     }
 
                     val dropletX = if (isLtr) {
@@ -150,7 +154,7 @@ internal fun <T> LiquidTabBarPlatter(
                             .weight(1f)
                             .fillMaxHeight()
                             .graphicsLayer {
-                                val scale = lerp(1f, physics.itemActiveScale, state.pressProgress)
+                                val scale = lerp(1f, physics.itemActiveScale, state.pressProgress.coerceIn(0f, 1f))
                                 scaleX = scale
                                 scaleY = scale
                             },

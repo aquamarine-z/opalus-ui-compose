@@ -33,8 +33,10 @@ class DampedDragAnimation(
     val onDrag: DampedDragAnimation.(size: IntSize, dragAmount: Offset) -> Unit = { _, _ -> },
 ) {
 
-    private val valueAnimationSpec =
+    private val dragAnimationSpec =
         spring(physics.dragDampingRatio, physics.dragStiffness, visibilityThreshold)
+    private val dockingAnimationSpec =
+        spring(physics.dockingDampingRatio, physics.dockingStiffness, visibilityThreshold)
     private val velocityAnimationSpec =
         spring(0.65f, 380f, visibilityThreshold * 10f)
     private val growProgressAnimationSpec =
@@ -118,7 +120,7 @@ class DampedDragAnimation(
     fun updateValue(value: Float) {
         val targetValue = value.coerceIn(valueRange)
         animationScope.launch {
-            valueAnimation.animateTo(targetValue, valueAnimationSpec) {
+            valueAnimation.animateTo(targetValue, dragAnimationSpec) {
                 updateVelocity()
             }
         }
@@ -150,7 +152,20 @@ class DampedDragAnimation(
                     }
 
                     launch {
-                        valueAnimation.animateTo(target, valueAnimationSpec) {
+                        val currentVel = valueAnimation.velocity
+                        val rangeSpan = (valueRange.endInclusive - valueRange.start).coerceAtLeast(0.001f)
+                        val trackerVel = velocityTracker.calculateVelocity().x / rangeSpan
+                        val initialVel = if (trackerVel.isFinite() && abs(trackerVel) > 0.01f) {
+                            trackerVel * physics.dockingInertiaFactor
+                        } else {
+                            currentVel * physics.dockingInertiaFactor
+                        }
+
+                        valueAnimation.animateTo(
+                            targetValue = target,
+                            animationSpec = dockingAnimationSpec,
+                            initialVelocity = initialVel
+                        ) {
                             updateVelocity()
                         }
                     }

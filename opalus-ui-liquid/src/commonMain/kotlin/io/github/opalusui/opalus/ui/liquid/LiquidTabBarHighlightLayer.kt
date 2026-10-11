@@ -30,7 +30,7 @@ internal fun <T> LiquidTabBarHighlightLayer(
     modifier: Modifier = Modifier,
     activeItem: @Composable (index: Int, item: T) -> Unit
 ) {
-    val scale = lerp(1f, physics.activeItemScale, state.pressProgress)
+    val scale = lerp(1f, physics.activeItemScale, state.pressProgress.coerceIn(0f, 1f))
 
     Row(
         modifier = modifier

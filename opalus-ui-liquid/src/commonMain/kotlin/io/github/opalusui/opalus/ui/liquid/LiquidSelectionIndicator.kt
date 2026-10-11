@@ -41,10 +41,13 @@ internal fun LiquidSelectionIndicator(
     isLtr: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val rawProgress = state.pressProgress
+    val visualProgress = rawProgress.coerceIn(0f, 1f)
+
     val currentIndicatorHeight = lerp(
         dimensions.indicatorIdleHeight,
         dimensions.indicatorActiveHeight,
-        state.pressProgress
+        rawProgress
     )
 
     Box(
@@ -59,46 +62,49 @@ internal fun LiquidSelectionIndicator(
                 backdrop = rememberCombinedBackdrop(backdrop, dockBackdrop, activeButtonsBackdrop),
                 shape = { Capsule() },
                 effects = {
-                    val progress = state.pressProgress
                     lens(
                         refractionHeight = lerp(
                             optics.indicatorRefractionHeightMin.toPx(),
                             optics.indicatorRefractionHeightMax.toPx(),
-                            progress
+                            visualProgress
                         ),
-                        refractionAmount = optics.indicatorRefractionAmount.toPx() * progress,
+                        refractionAmount = optics.indicatorRefractionAmount.toPx() * visualProgress,
                         depthEffect = true,
                         chromaticAberration = optics.chromaticAberration
                     )
                 },
                 highlight = {
-                    val progress = state.pressProgress
                     Highlight.Default.copy(
-                        alpha = optics.indicatorHighlightAlpha * progress
+                        alpha = optics.indicatorHighlightAlpha * visualProgress
                     )
                 },
                 shadow = {
-                    val progress = state.pressProgress
                     Shadow(
                         radius = optics.indicatorShadowRadius,
-                        offset = DpOffset(0.dp, optics.indicatorShadowOffsetY * progress),
-                        alpha = optics.indicatorShadowAlpha * progress
+                        offset = DpOffset(0.dp, optics.indicatorShadowOffsetY * visualProgress),
+                        alpha = optics.indicatorShadowAlpha * visualProgress
                     )
                 },
                 innerShadow = {
-                    val progress = state.pressProgress
                     InnerShadow(
-                        radius = optics.indicatorInnerShadowRadius * progress,
-                        alpha = optics.indicatorInnerShadowAlpha * progress
+                        radius = optics.indicatorInnerShadowRadius * visualProgress,
+                        alpha = optics.indicatorInnerShadowAlpha * visualProgress
                     )
                 },
                 layerBlock = {
-                    val progress = state.pressProgress
-                    val scale = lerp(1f, physics.indicatorActiveScale, progress)
+                    val scale = lerp(1f, physics.indicatorActiveScale, visualProgress)
                     scaleX = scale
                     scaleY = scale
-                    if (progress > 0.001f) {
-                        val speed = (abs(state.velocity) / 6f) * progress
+
+                    // 水珠缩小触底果冻回弹：当 rawProgress 发生欠阻尼轻微回落反弹时，横向微扩张纵向微压缩
+                    if (rawProgress < 0f && physics.dropletElasticity > 0f) {
+                        val rebound = -rawProgress * physics.dropletElasticity
+                        scaleX *= (1f + rebound)
+                        scaleY *= (1f - rebound * 0.7f).coerceAtLeast(0.6f)
+                    }
+
+                    if (visualProgress > 0.001f) {
+                        val speed = (abs(state.velocity) / 6f) * visualProgress
                         val stretch = (speed * physics.velocityHorizontalFactor)
                             .coerceIn(0f, physics.maxVelocityCoerce)
                         scaleX *= (1f + stretch)
@@ -106,23 +112,22 @@ internal fun LiquidSelectionIndicator(
                     }
                 },
                 onDrawSurface = {
-                    val progress = state.pressProgress
                     // 1. 静止态：比 bar 小且贴合圆角的柔和微暗选中槽位底色
                     drawRect(
                         color = colors.indicatorIdleColor,
-                        alpha = 1f - progress
+                        alpha = 1f - visualProgress
                     )
                     // 2. 激活态：极轻柔的清透水润微光（纯净透亮，杜绝乳白厚重感）
                     drawRect(
                         color = colors.indicatorActiveTint,
-                        alpha = progress
+                        alpha = visualProgress
                     )
                 }
             )
             .border(
                 width = dimensions.indicatorBorderWidth,
                 color = colors.indicatorBorderColor.copy(
-                    alpha = colors.indicatorBorderColor.alpha * state.pressProgress
+                    alpha = colors.indicatorBorderColor.alpha * visualProgress
                 ),
                 shape = Capsule()
             )
