@@ -78,31 +78,33 @@ fun <T> LiquidTabBar(
                             // 1. 按下瞬间：水滴立即激活，水滴几何中心立刻精准对齐鼠标 X 坐标
                             state.onPointerDown(downX, totalW, tabWidth, padHorizontalPx, isLtr)
 
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                val change = event.changes.firstOrNull { it.id == down.id }
-                                if (change == null || !change.pressed) {
-                                    break
-                                }
-                                change.consume()
-                                val currentX = change.position.x
-                                lastX = currentX
+                            try {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val change = event.changes.firstOrNull { it.id == down.id }
+                                    if (change == null || !change.pressed) {
+                                        break
+                                    }
+                                    change.consume()
+                                    val currentX = change.position.x
+                                    lastX = currentX
 
-                                // 2. 持续追踪：水滴几何中心跟随光标，左右边缘允许带弹性限度拉出
-                                state.onPointerMove(currentX, totalW, tabWidth, padHorizontalPx, isLtr)
+                                    // 2. 持续追踪：水滴几何中心跟随光标，左右边缘允许带弹性限度拉出
+                                    state.onPointerMove(currentX, totalW, tabWidth, padHorizontalPx, isLtr)
+                                }
+                            } finally {
+                                // 3. 鼠标/手指松开或手势被拦截：依据最后停留的区域决定目标槽位并触发回调，确保状态必定复位
+                                state.onPointerUp(
+                                    lastX = lastX,
+                                    totalWidth = totalW,
+                                    tabWidth = tabWidth,
+                                    padHorizontalPx = padHorizontalPx,
+                                    isLtr = isLtr,
+                                    onTabSelected = { targetIndex ->
+                                        onTabSelected(targetIndex, items[targetIndex])
+                                    }
+                                )
                             }
-
-                            // 3. 鼠标松开：依据手指/鼠标光标最后停留的区域决定目标槽位并触发回调
-                            state.onPointerUp(
-                                lastX = lastX,
-                                totalWidth = totalW,
-                                tabWidth = tabWidth,
-                                padHorizontalPx = padHorizontalPx,
-                                isLtr = isLtr,
-                                onTabSelected = { targetIndex ->
-                                    onTabSelected(targetIndex, items[targetIndex])
-                                }
-                            )
                         }
                     },
                 contentAlignment = Alignment.CenterStart

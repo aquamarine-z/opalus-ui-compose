@@ -96,17 +96,22 @@ internal fun LiquidSelectionIndicator(
                     val scale = lerp(1f, physics.indicatorActiveScale, progress)
                     scaleX = scale
                     scaleY = scale
-                    val velocity = state.velocity / 10f
-                    scaleX /= 1f - (velocity * physics.velocityHorizontalFactor)
-                        .fastCoerceIn(
-                            -physics.maxVelocityCoerce,
-                            physics.maxVelocityCoerce
-                        )
-                    scaleY *= 1f - (velocity * physics.velocityVerticalFactor)
-                        .fastCoerceIn(
-                            -physics.maxVelocityCoerce,
-                            physics.maxVelocityCoerce
-                        )
+                    if (progress > 0.001f) {
+                        val velocity = (state.velocity / 10f) * progress
+                        val xFactor = (velocity * physics.velocityHorizontalFactor)
+                            .fastCoerceIn(
+                                -physics.maxVelocityCoerce,
+                                physics.maxVelocityCoerce
+                            )
+                        val yFactor = (velocity * physics.velocityVerticalFactor)
+                            .fastCoerceIn(
+                                -physics.maxVelocityCoerce,
+                                physics.maxVelocityCoerce
+                            )
+                        val denomX = (1f - xFactor).coerceAtLeast(0.1f)
+                        scaleX /= denomX
+                        scaleY *= (1f - yFactor).coerceAtLeast(0.1f)
+                    }
                 },
                 onDrawSurface = {
                     val progress = state.pressProgress
