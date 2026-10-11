@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -55,73 +56,110 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
 
     val playgroundBackdrop = rememberLayerBackdrop()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(32.dp),
-        verticalArrangement = Arrangement.spacedBy(28.dp)
-    ) {
-        // Section Header
-        M3SectionHeader(
-            title = "LiquidTabBar Component",
-            subtitle = "iOS 27 HIG-compliant suspended fluid glass tab bar featuring optical refraction lens, triple-backdrop sampling, and anti-ghosting difference cutout.",
-            badge = "opalus-ui-liquid"
-        )
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isMobile = maxWidth < 768.dp
+        val pagePadding = if (isMobile) 16.dp else 32.dp
 
-        // Demo 1: Full-Featured Wallpaper Refraction Playground
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(pagePadding),
+            verticalArrangement = Arrangement.spacedBy(if (isMobile) 20.dp else 28.dp)
         ) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Demo 1: Real-Time Optical Refraction Playground",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Scroll the vibrant reference cards underneath the floating dock to inspect live optical distortion and lens magnification.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+            // Section Header
+            M3SectionHeader(
+                title = "LiquidTabBar Component",
+                subtitle = "iOS 27 HIG-compliant suspended fluid glass tab bar featuring optical refraction lens, triple-backdrop sampling, and anti-ghosting difference cutout.",
+                badge = "opalus-ui-liquid"
+            )
+
+            // Demo 1: Full-Featured Wallpaper Refraction Playground
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(modifier = Modifier.padding(if (isMobile) 18.dp else 24.dp)) {
+                    if (isMobile) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Demo 1: Real-Time Optical Refraction Playground",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Scroll the vibrant reference cards underneath the floating dock to inspect live optical distortion and lens magnification.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Chromatic Aberration",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Switch(
+                                    checked = chromaticAberration,
+                                    onCheckedChange = { chromaticAberration = it }
+                                )
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Demo 1: Real-Time Optical Refraction Playground",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Scroll the vibrant reference cards underneath the floating dock to inspect live optical distortion and lens magnification.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Chromatic Aberration",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Switch(
+                                    checked = chromaticAberration,
+                                    onCheckedChange = { chromaticAberration = it }
+                                )
+                            }
+                        }
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Chromatic Aberration",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Switch(
-                            checked = chromaticAberration,
-                            onCheckedChange = { chromaticAberration = it }
-                        )
-                    }
-                }
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Scrollable Viewport with suspended LiquidTabBar
-                DisableSelection {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(480.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(20.dp))
-                            .background(Color(0xFF0B0F17)),
-                        contentAlignment = Alignment.BottomCenter
-                    ) {
+                    // Scrollable Viewport with suspended LiquidTabBar
+                    DisableSelection {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(if (isMobile) 400.dp else 480.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(20.dp))
+                                .background(Color(0xFF0B0F17)),
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
                     // 1. Long Scrollable Reference Gallery
                     Column(
                         modifier = Modifier
@@ -683,6 +721,7 @@ Box {
 }"""
         )
     }
+}
 }
 
 @Composable

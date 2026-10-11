@@ -3,6 +3,7 @@ package io.github.opalusui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -70,13 +71,17 @@ fun DialogsDemoPage() {
         if (history.size > 5) history.removeLast()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(32.dp),
-        verticalArrangement = Arrangement.spacedBy(28.dp)
-    ) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isMobile = maxWidth < 768.dp
+        val pagePadding = if (isMobile) 16.dp else 32.dp
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(pagePadding),
+            verticalArrangement = Arrangement.spacedBy(if (isMobile) 20.dp else 28.dp)
+        ) {
         // Section Header
         M3SectionHeader(
             title = "Async Dialog & Surface System",
@@ -169,83 +174,157 @@ fun DialogsDemoPage() {
                 Spacer(modifier = Modifier.height(20.dp))
 
                 DisableSelection {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        // 1. Alert Dialog
-                        Button(
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                scope.launch {
-                                    val res = controller.dialogs.alert(
-                                        title = "System Notification",
-                                        message = "Build artifact 'opalus-ui-liquid:0.2.0' compiled with Compose Multiplatform 1.12.1.",
-                                        okText = "Acknowledge"
-                                    )
-                                    logResult("Alert finished: user acknowledged ($res)")
-                                }
-                            }
+                    if (isMobile) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Text("Alert Dialog")
-                        }
+                            Button(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    scope.launch {
+                                        val res = controller.dialogs.alert(
+                                            title = "System Notification",
+                                            message = "Build artifact 'opalus-ui-liquid:0.2.0' compiled with Compose Multiplatform 1.12.1.",
+                                            okText = "Acknowledge"
+                                        )
+                                        logResult("Alert finished: user acknowledged ($res)")
+                                    }
+                                }
+                            ) {
+                                Text("Alert Dialog")
+                            }
 
-                        // 2. Destructive Confirm
-                        Button(
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                            onClick = {
-                                scope.launch {
-                                    val confirmed = controller.dialogs.confirm(
-                                        title = "Dangerous Action: Delete Branch",
-                                        message = "Are you sure you want to delete branch 'feature/fluid-glass'? This action cannot be reverted.",
-                                        confirmText = "Delete Permanently",
-                                        cancelText = "Keep Branch",
-                                        options = ConfirmDialogOptions().apply {
-                                            type = ConfirmDialogType.Dangerous
-                                            properties = DialogProperties(
-                                                dismissOnClickOutside = true,
-                                                dismissOnBackPress = true
-                                            )
-                                        }
-                                    )
-                                    logResult("Dangerous confirm returned: ${if (confirmed == true) "Confirmed (true)" else "Cancelled (false)"}")
+                            Button(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                                onClick = {
+                                    scope.launch {
+                                        val confirmed = controller.dialogs.confirm(
+                                            title = "Dangerous Action: Delete Branch",
+                                            message = "Are you sure you want to delete branch 'feature/fluid-glass'? This action cannot be reverted.",
+                                            confirmText = "Delete Permanently",
+                                            cancelText = "Keep Branch",
+                                            options = ConfirmDialogOptions().apply {
+                                                type = ConfirmDialogType.Dangerous
+                                                properties = DialogProperties(
+                                                    dismissOnClickOutside = true,
+                                                    dismissOnBackPress = true
+                                                )
+                                            }
+                                        )
+                                        logResult("Dangerous confirm returned: ${if (confirmed == true) "Confirmed (true)" else "Cancelled (false)"}")
+                                    }
                                 }
+                            ) {
+                                Text("Dangerous Confirm")
                             }
-                        ) {
-                            Text("Dangerous Confirm")
-                        }
 
-                        // 3. Safe Confirm
-                        Button(
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                            onClick = {
-                                scope.launch {
-                                    val confirmed = controller.dialogs.confirm(
-                                        title = "Publish Release",
-                                        message = "Do you want to sign and push package 'io.github.opalusui:opalus-ui-liquid' to Maven Central?",
-                                        confirmText = "Publish",
-                                        cancelText = "Draft Later"
-                                    )
-                                    logResult("Safe confirm returned: ${if (confirmed == true) "Published (true)" else "Drafted (false)"}")
+                            Button(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                onClick = {
+                                    scope.launch {
+                                        val confirmed = controller.dialogs.confirm(
+                                            title = "Publish Release",
+                                            message = "Do you want to sign and push package 'io.github.opalusui:opalus-ui-liquid' to Maven Central?",
+                                            confirmText = "Publish",
+                                            cancelText = "Draft Later"
+                                        )
+                                        logResult("Safe confirm returned: ${if (confirmed == true) "Published (true)" else "Drafted (false)"}")
+                                    }
                                 }
+                            ) {
+                                Text("Safe Confirm")
                             }
-                        ) {
-                            Text("Safe Confirm")
-                        }
 
-                        // 4. Custom Slot Dialog
-                        OutlinedButton(
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                scope.launch {
-                                    val selection = controller.showDeploymentSelectorDialog()
-                                    logResult("Custom slot dialog resolved: $selection")
+                            OutlinedButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    scope.launch {
+                                        val selection = controller.showDeploymentSelectorDialog()
+                                        logResult("Custom slot dialog resolved: $selection")
+                                    }
                                 }
+                            ) {
+                                Text("Custom Slot Dialog")
                             }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            Text("Custom Slot Dialog")
+                            Button(
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    scope.launch {
+                                        val res = controller.dialogs.alert(
+                                            title = "System Notification",
+                                            message = "Build artifact 'opalus-ui-liquid:0.2.0' compiled with Compose Multiplatform 1.12.1.",
+                                            okText = "Acknowledge"
+                                        )
+                                        logResult("Alert finished: user acknowledged ($res)")
+                                    }
+                                }
+                            ) {
+                                Text("Alert Dialog")
+                            }
+
+                            Button(
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                                onClick = {
+                                    scope.launch {
+                                        val confirmed = controller.dialogs.confirm(
+                                            title = "Dangerous Action: Delete Branch",
+                                            message = "Are you sure you want to delete branch 'feature/fluid-glass'? This action cannot be reverted.",
+                                            confirmText = "Delete Permanently",
+                                            cancelText = "Keep Branch",
+                                            options = ConfirmDialogOptions().apply {
+                                                type = ConfirmDialogType.Dangerous
+                                                properties = DialogProperties(
+                                                    dismissOnClickOutside = true,
+                                                    dismissOnBackPress = true
+                                                )
+                                            }
+                                        )
+                                        logResult("Dangerous confirm returned: ${if (confirmed == true) "Confirmed (true)" else "Cancelled (false)"}")
+                                    }
+                                }
+                            ) {
+                                Text("Dangerous Confirm")
+                            }
+
+                            Button(
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                onClick = {
+                                    scope.launch {
+                                        val confirmed = controller.dialogs.confirm(
+                                            title = "Publish Release",
+                                            message = "Do you want to sign and push package 'io.github.opalusui:opalus-ui-liquid' to Maven Central?",
+                                            confirmText = "Publish",
+                                            cancelText = "Draft Later"
+                                        )
+                                        logResult("Safe confirm returned: ${if (confirmed == true) "Published (true)" else "Drafted (false)"}")
+                                    }
+                                }
+                            ) {
+                                Text("Safe Confirm")
+                            }
+
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    scope.launch {
+                                        val selection = controller.showDeploymentSelectorDialog()
+                                        logResult("Custom slot dialog resolved: $selection")
+                                    }
+                                }
+                            ) {
+                                Text("Custom Slot Dialog")
+                            }
                         }
                     }
                 }
@@ -507,6 +586,7 @@ suspend fun pickFormat(controller: SurfaceController): ExportFormat? {
 }"""
         )
     }
+}
 }
 
 private suspend fun SurfaceController.showDeploymentSelectorDialog(): String {

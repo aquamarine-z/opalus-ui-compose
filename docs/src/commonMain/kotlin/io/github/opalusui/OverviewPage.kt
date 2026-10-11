@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,205 +39,269 @@ fun OverviewPage(
     onNavigateToLiquid: () -> Unit,
     onNavigateToDialogs: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(32.dp),
-        verticalArrangement = Arrangement.spacedBy(28.dp)
-    ) {
-        // Hero Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            )
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isMobile = maxWidth < 768.dp
+        val pagePadding = if (isMobile) 16.dp else 32.dp
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(pagePadding),
+            verticalArrangement = Arrangement.spacedBy(if (isMobile) 20.dp else 28.dp)
         ) {
-            Column(modifier = Modifier.padding(32.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            // Hero Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
+                Column(modifier = Modifier.padding(if (isMobile) 20.dp else 32.dp)) {
+                    Text(
+                        text = "Opalus UI",
+                        style = if (isMobile) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Material You Design System & iOS 27 Fluid Glass Multiplatform Toolkit",
+                        style = if (isMobile) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = "Opalus UI bridges the gap between Material Design 3 ergonomics and Apple Human Interface Guidelines fluid optics. Engineered for Compose Multiplatform with zero JNI overhead, pure Kotlin multiplatform compilation, and SkSL shader hardware acceleration.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 22.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    if (isMobile) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Button(
+                                onClick = onNavigateToLiquid,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Text("Explore LiquidTabBar")
+                            }
+
+                            Button(
+                                onClick = onNavigateToDialogs,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                            ) {
+                                Text(
+                                    text = "Explore Dialogs System",
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    } else {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Button(
+                                onClick = onNavigateToLiquid,
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Text("Explore LiquidTabBar")
+                            }
+
+                            Button(
+                                onClick = onNavigateToDialogs,
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                            ) {
+                                Text(
+                                    text = "Explore Dialogs System",
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Component Cards (Responsive: Column on mobile, Row on desktop)
+            val liquidCardContent: @Composable () -> Unit = {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp))
+                        .clickable { onNavigateToLiquid() },
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
-                    Column {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "opalus-ui-liquid",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            M3Badge(text = "iOS 27 HIG", isPrimary = true)
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            text = "Opalus UI",
-                            style = MaterialTheme.typography.displaySmall,
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = "Suspended fluid glass tab bar featuring triple-backdrop physical sampling, 3D convex lens magnification, chromatic aberration dispersion, and ClipOp.Difference anti-ghosting cutout.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = 22.sp
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Material You Design System & iOS 27 Fluid Glass Multiplatform Toolkit",
-                            style = MaterialTheme.typography.titleMedium,
+                            text = "View details & playground →",
+                            style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Opalus UI bridges the gap between Material Design 3 ergonomics and Apple Human Interface Guidelines fluid optics. Engineered for Compose Multiplatform with zero JNI overhead, pure Kotlin multiplatform compilation, and SkSL shader hardware acceleration.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 24.sp
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(
-                        onClick = onNavigateToLiquid,
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        Text("Explore LiquidTabBar")
-                    }
-
-                    Button(
-                        onClick = onNavigateToDialogs,
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                    ) {
-                        Text(
-                            text = "Explore Dialogs System",
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
             }
-        }
 
-        // Component Grid
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            // Liquid Card
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(24.dp))
-                    .clickable { onNavigateToLiquid() },
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+            val coreCardContent: @Composable () -> Unit = {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp))
+                        .clickable { onNavigateToDialogs() },
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "opalus-ui-core",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            M3Badge(text = "Async Surface")
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            text = "opalus-ui-liquid",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = "Coroutine-driven modal dialog architecture. Eliminates state lifting and remember { mutableStateOf } boilerplate. Invoke alerts, confirms, and custom slots directly from suspend functions.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = 22.sp
                         )
-                        M3Badge(text = "iOS 27 HIG", isPrimary = true)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "View details & demos →",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = "Suspended fluid glass tab bar featuring triple-backdrop physical sampling, 3D convex lens magnification, chromatic aberration dispersion, and ClipOp.Difference anti-ghosting cutout.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = 22.sp
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "View details & playground →",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
                 }
             }
 
-            // Core Card
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(24.dp))
-                    .clickable { onNavigateToDialogs() },
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "opalus-ui-core",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        M3Badge(text = "Async Surface")
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = "Coroutine-driven modal dialog architecture. Eliminates state lifting and remember { mutableStateOf } boilerplate. Invoke alerts, confirms, and custom slots directly from suspend functions.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = 22.sp
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "View details & demos →",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
+            if (isMobile) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    liquidCardContent()
+                    coreCardContent()
                 }
-            }
-        }
-
-        // Architectural Pillars
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(modifier = Modifier.padding(28.dp)) {
-                Text(
-                    text = "Core Architectural Pillars",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-
+            } else {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    PillarItem(
-                        index = "01",
-                        title = "Zero Ghosting",
-                        description = "Employs reverse geometric difference cutout to eliminate gray/colored label overlaps.",
-                        modifier = Modifier.weight(1f)
+                    Box(modifier = Modifier.weight(1f)) { liquidCardContent() }
+                    Box(modifier = Modifier.weight(1f)) { coreCardContent() }
+                }
+            }
+
+            // Architectural Pillars (Responsive: Column on mobile, Row on desktop)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(modifier = Modifier.padding(if (isMobile) 20.dp else 28.dp)) {
+                    Text(
+                        text = "Core Architectural Pillars",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    PillarItem(
-                        index = "02",
-                        title = "3D Optical Lens",
-                        description = "Real-time physical refraction and meniscus magnification over scrollable backgrounds.",
-                        modifier = Modifier.weight(1f)
-                    )
-                    PillarItem(
-                        index = "03",
-                        title = "Damped Physics",
-                        description = "Precision velocity tracking and damping animation with stretch & squash dynamics.",
-                        modifier = Modifier.weight(1f)
-                    )
-                    PillarItem(
-                        index = "04",
-                        title = "Pure Multiplatform",
-                        description = "Runs natively across Android, Desktop JVM, iOS, and Web (Wasm / JS).",
-                        modifier = Modifier.weight(1f)
-                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (isMobile) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            PillarItem(
+                                index = "01",
+                                title = "Zero Ghosting",
+                                description = "Employs reverse geometric difference cutout to eliminate gray/colored label overlaps.",
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            PillarItem(
+                                index = "02",
+                                title = "3D Optical Lens",
+                                description = "Real-time physical refraction and meniscus magnification over scrollable backgrounds.",
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            PillarItem(
+                                index = "03",
+                                title = "Damped Physics",
+                                description = "Precision velocity tracking and damping animation with stretch & squash dynamics.",
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            PillarItem(
+                                index = "04",
+                                title = "Pure Multiplatform",
+                                description = "Runs natively across Android, Desktop JVM, iOS, and Web (Wasm / JS).",
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            PillarItem(
+                                index = "01",
+                                title = "Zero Ghosting",
+                                description = "Employs reverse geometric difference cutout to eliminate gray/colored label overlaps.",
+                                modifier = Modifier.weight(1f)
+                            )
+                            PillarItem(
+                                index = "02",
+                                title = "3D Optical Lens",
+                                description = "Real-time physical refraction and meniscus magnification over scrollable backgrounds.",
+                                modifier = Modifier.weight(1f)
+                            )
+                            PillarItem(
+                                index = "03",
+                                title = "Damped Physics",
+                                description = "Precision velocity tracking and damping animation with stretch & squash dynamics.",
+                                modifier = Modifier.weight(1f)
+                            )
+                            PillarItem(
+                                index = "04",
+                                title = "Pure Multiplatform",
+                                description = "Runs natively across Android, Desktop JVM, iOS, and Web (Wasm / JS).",
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
                 }
             }
         }
