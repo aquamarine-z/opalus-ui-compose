@@ -9,5 +9,5 @@ We prepared the following components to provide a better experience for your pro
 
 ## Installation
 ```kotlin build.gradle.kts
-implementation("io.github.opalusui:opalus-ui:0.1.3")
+implementation("io.github.opalusui:opalus-ui-core:0.1.6")
 ```

@@ -70,7 +70,7 @@ private suspend fun SurfaceController.showCustomDialog(): Boolean {
                 DialogHeader {
                     Text("Title")
                 }
-            }, actions = arrayOf({
+            }, actions = listOf<@Composable () -> Unit>({
                 Button(onClick = {
                     close(false)
                 }) {

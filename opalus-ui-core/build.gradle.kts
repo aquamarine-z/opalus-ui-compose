@@ -1,5 +1,5 @@
 group = "io.github.opalusui"
-version = "0.1.5"
+version = "0.1.6"
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     // 如果你希望纯 Android 项目也能直接依赖这个库（生成 AAR），可以取消下面这行的注释
@@ -19,7 +19,7 @@ kotlin {
     jvm("desktop")
 
     // iOS 全系列（推荐这样写，覆盖真机 + 模拟器）
-    iosX64()               // 老 Intel Mac 模拟器（可选，如果你不需要可以删）
+    // iosX64()               // 老 Intel Mac 模拟器（Compose 1.12+ 已移除支持）
     iosArm64()             // iPhone 真机
     iosSimulatorArm64()    // Apple Silicon Mac 模拟器
 
@@ -70,10 +70,10 @@ mavenPublishing {
     publishToMavenCentral()
 
     signAllPublications()
-    coordinates(group.toString(), "opalus-ui", version.toString())
+    coordinates(group.toString(), "opalus-ui-core", version.toString())
     pom {
-        name.set("Opalus UI")
-        description.set("A Compose Multiplatform modal/surface UI library")
+        name.set("Opalus UI Core")
+        description.set("A Compose Multiplatform core modal/surface UI library")
         url.set("https://github.com/aquamarine-z/opalus-ui-compose")
 
         licenses {
