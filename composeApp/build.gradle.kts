@@ -55,6 +55,7 @@ kotlin {
             api(compose.ui)
             api(compose.components.resources)
             implementation(project(":opalus-ui-core"))
+            implementation(project(":opalus-ui-liquid"))
             //implementation(compose.components.uiToolingPreview)
 
         }

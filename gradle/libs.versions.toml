@@ -15,7 +15,9 @@ junit = "4.13.2"
 kotlin = "2.4.20"
 kotlinx-coroutines = "1.10.2"
 materialIconsExtended = "1.7.8"
-opalusUi = "0.1.6"
+opalusUi = "0.2.0"
+kyant-backdrop = "2.0.1"
+kyant-shapes = "1.2.1"
 
 [libraries]
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
@@ -31,6 +33,9 @@ androidx-lifecycle-viewmodelCompose = { module = "org.jetbrains.androidx.lifecyc
 androidx-lifecycle-runtimeCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
 kotlinx-coroutinesSwing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
 opalus-ui-core = { module = "io.github.opalusui:opalus-ui-core", version.ref = "opalusUi" }
+opalus-ui-liquid = { module = "io.github.opalusui:opalus-ui-liquid", version.ref = "opalusUi" }
+kyant-backdrop = { module = "io.github.kyant0:backdrop", version.ref = "kyant-backdrop" }
+kyant-shapes = { module = "io.github.kyant0:shapes", version.ref = "kyant-shapes" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
