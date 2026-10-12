@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -53,6 +54,9 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
 
     var selectedTab2 by remember { mutableStateOf(0) }
     val tabs2 = remember { listOf("Dashboard", "Analytics", "Settings") }
+
+    var physics by remember { mutableStateOf(LiquidTabBarDefaults.physics()) }
+    var showPhysicsDialog by remember { mutableStateOf(false) }
 
     val playgroundBackdrop = rememberLayerBackdrop()
 
@@ -99,17 +103,29 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Chromatic Aberration",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Switch(
-                                    checked = chromaticAberration,
-                                    onCheckedChange = { chromaticAberration = it }
-                                )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Chromatic Aberration",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Switch(
+                                        checked = chromaticAberration,
+                                        onCheckedChange = { chromaticAberration = it }
+                                    )
+                                }
+
+                                FilledTonalButton(
+                                    onClick = { showPhysicsDialog = true },
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text("动力学调优", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                }
                             }
                         }
                     } else {
@@ -118,7 +134,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = "Demo 1: Real-Time Optical Refraction Playground",
                                     style = MaterialTheme.typography.titleMedium,
@@ -132,17 +148,29 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                                 )
                             }
 
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Chromatic Aberration",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Switch(
-                                    checked = chromaticAberration,
-                                    onCheckedChange = { chromaticAberration = it }
-                                )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Chromatic Aberration",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Switch(
+                                        checked = chromaticAberration,
+                                        onCheckedChange = { chromaticAberration = it }
+                                    )
+                                }
+
+                                FilledTonalButton(
+                                    onClick = { showPhysicsDialog = true },
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("Physics Tuner / 动力学调优", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                }
                             }
                         }
                     }
@@ -245,6 +273,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                                 isDark = isDarkTheme,
                                 chromaticAberration = chromaticAberration
                             ),
+                            physics = physics,
                             modifier = Modifier
                                 .widthIn(max = 440.dp)
                                 .fillMaxWidth(0.92f),
@@ -285,17 +314,32 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text(
-                    text = "Demo 2: Minimalist Navigation Dock",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Stand-alone navigation bar with subtle frosted blur platter, primary active highlight, and responsive pointer tracking.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Demo 2: Minimalist Navigation Dock",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Stand-alone navigation bar with subtle frosted blur platter, primary active highlight, and responsive pointer tracking.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    FilledTonalButton(
+                        onClick = { showPhysicsDialog = true },
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("调优参数", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
@@ -317,6 +361,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                                 activeItemColor = MaterialTheme.colorScheme.primary,
                                 inactiveItemColor = MaterialTheme.colorScheme.onSurfaceVariant
                             ),
+                            physics = physics,
                             modifier = Modifier.widthIn(max = 380.dp),
                             inactiveItem = { _, item ->
                                 LiquidTabItem(
@@ -738,6 +783,15 @@ Box {
         ...
     )
 }"""
+        )
+    }
+
+    if (showPhysicsDialog) {
+        LiquidPhysicsTuningDialog(
+            isDarkTheme = isDarkTheme,
+            currentPhysics = physics,
+            onPhysicsChange = { physics = it },
+            onDismissRequest = { showPhysicsDialog = false }
         )
     }
 }

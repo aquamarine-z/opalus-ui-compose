@@ -93,14 +93,16 @@ internal fun <T> LiquidTabBarPlatter(
                     val currentDropletHeight = lerp(
                         dimensions.indicatorIdleHeight.toPx(),
                         dimensions.indicatorActiveHeight.toPx(),
-                        rawProgress
+                        visualProgress
                     )
                     val scale = lerp(1f, physics.indicatorActiveScale, visualProgress)
                     var scaleX = scale
+                    var scaleY = 1f
 
-                    if (rawProgress < 0f && physics.dropletElasticity > 0f) {
-                        val rebound = -rawProgress * physics.dropletElasticity
-                        scaleX *= (1f + rebound)
+                    val jellyWobble = state.jelly * physics.dropletElasticity
+                    if (jellyWobble != 0f) {
+                        scaleX *= (1f + jellyWobble * 0.45f)
+                        scaleY *= (1f - jellyWobble * 0.35f).coerceAtLeast(0.5f)
                     }
 
                     if (visualProgress > 0.001f) {
@@ -122,7 +124,7 @@ internal fun <T> LiquidTabBarPlatter(
                     val right = centerX + halfWidth
 
                     val centerY = size.height / 2f
-                    val halfHeight = currentDropletHeight / 2f
+                    val halfHeight = (currentDropletHeight * scaleY) / 2f
                     val top = centerY - halfHeight
                     val bottom = centerY + halfHeight
 

@@ -47,6 +47,9 @@ class LiquidTabBarState(
     val velocity: Float
         get() = dampedAnimation.velocity
 
+    val jelly: Float
+        get() = dampedAnimation.jelly
+
     val targetValue: Float
         get() = dampedAnimation.targetValue
 

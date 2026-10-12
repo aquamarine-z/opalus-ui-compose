@@ -58,6 +58,8 @@ class DampedDragAnimation(
         Animatable(initialScale, 0.001f)
     private val scaleYAnimation =
         Animatable(initialScale, 0.001f)
+    private val jellyAnimation =
+        Animatable(0f, 0.001f)
 
     private val mutatorMutex = MutatorMutex()
 
@@ -71,6 +73,7 @@ class DampedDragAnimation(
     val scaleX: Float get() = scaleXAnimation.value
     val scaleY: Float get() = scaleYAnimation.value
     val velocity: Float get() = velocityAnimation.value
+    val jelly: Float get() = jellyAnimation.value
 
     val modifier: Modifier = Modifier.pointerInput(Unit) {
         inspectDragGestures(
@@ -101,6 +104,17 @@ class DampedDragAnimation(
         pressJob?.cancel()
         val token = ++animationToken
         pressJob = animationScope.launch {
+            launch {
+                jellyAnimation.snapTo(-0.30f)
+                jellyAnimation.animateTo(
+                    targetValue = 0f,
+                    animationSpec = spring(
+                        dampingRatio = physics.growDampingRatio,
+                        stiffness = physics.growStiffness * 0.8f,
+                        visibilityThreshold = 0.001f
+                    )
+                )
+            }
             launch {
                 pressProgressAnimation.animateTo(1f, growProgressAnimationSpec)
             }
@@ -148,6 +162,19 @@ class DampedDragAnimation(
                                     .first()
                             }
                         }
+                        launch {
+                            // 水珠缩小触底果冻回弹：进入吸附收拢区间时，瞬时注入果冻形变脉冲 (1.0f)
+                            // 欠阻尼弹簧驱动横向与纵向交替回弹振荡，在缩小与完全进入 inactive 时呈现水滴/果冻弹性质感
+                            jellyAnimation.snapTo(1f)
+                            jellyAnimation.animateTo(
+                                targetValue = 0f,
+                                animationSpec = spring(
+                                    dampingRatio = (physics.shrinkDampingRatio * 0.78f).coerceIn(0.40f, 0.75f),
+                                    stiffness = (physics.shrinkStiffness * 0.75f).coerceIn(160f, 600f),
+                                    visibilityThreshold = 0.001f
+                                )
+                            )
+                        }
                         pressProgressAnimation.animateTo(0f, shrinkProgressAnimationSpec)
                     }
 
@@ -178,6 +205,7 @@ class DampedDragAnimation(
                     scaleXAnimation.snapTo(initialScale)
                     scaleYAnimation.snapTo(initialScale)
                     velocityAnimation.snapTo(0f)
+                    jellyAnimation.snapTo(0f)
                 }
             }
         }

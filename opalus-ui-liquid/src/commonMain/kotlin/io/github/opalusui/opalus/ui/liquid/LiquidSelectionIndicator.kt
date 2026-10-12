@@ -47,7 +47,7 @@ internal fun LiquidSelectionIndicator(
     val currentIndicatorHeight = lerp(
         dimensions.indicatorIdleHeight,
         dimensions.indicatorActiveHeight,
-        rawProgress
+        visualProgress
     )
 
     Box(
@@ -93,23 +93,26 @@ internal fun LiquidSelectionIndicator(
                 },
                 layerBlock = {
                     val scale = lerp(1f, physics.indicatorActiveScale, visualProgress)
-                    scaleX = scale
-                    scaleY = scale
+                    var sX = scale
+                    var sY = scale
 
-                    // 水珠缩小触底果冻回弹：当 rawProgress 发生欠阻尼轻微回落反弹时，横向微扩张纵向微压缩
-                    if (rawProgress < 0f && physics.dropletElasticity > 0f) {
-                        val rebound = -rawProgress * physics.dropletElasticity
-                        scaleX *= (1f + rebound)
-                        scaleY *= (1f - rebound * 0.7f).coerceAtLeast(0.6f)
+                    // 水珠缩小触底果冻回弹：体积守恒的果冻晃动 (横向舒展/纵向挤压 交替振荡)
+                    val jellyWobble = state.jelly * physics.dropletElasticity
+                    if (jellyWobble != 0f) {
+                        sX *= (1f + jellyWobble * 0.45f)
+                        sY *= (1f - jellyWobble * 0.35f).coerceAtLeast(0.5f)
                     }
 
                     if (visualProgress > 0.001f) {
                         val speed = (abs(state.velocity) / 6f) * visualProgress
                         val stretch = (speed * physics.velocityHorizontalFactor)
                             .coerceIn(0f, physics.maxVelocityCoerce)
-                        scaleX *= (1f + stretch)
-                        scaleY *= (1f - stretch * physics.velocityVerticalFactor).coerceAtLeast(0.7f)
+                        sX *= (1f + stretch)
+                        sY *= (1f - stretch * physics.velocityVerticalFactor).coerceAtLeast(0.7f)
                     }
+
+                    scaleX = sX
+                    scaleY = sY
                 },
                 onDrawSurface = {
                     // 1. 静止态：比 bar 小且贴合圆角的柔和微暗选中槽位底色
