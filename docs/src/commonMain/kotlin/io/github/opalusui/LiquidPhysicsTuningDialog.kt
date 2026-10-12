@@ -120,11 +120,11 @@ private val physicsParamDocs = mapOf(
     "dropletElasticity" to PhysicsParamInfo(
         id = "dropletElasticity",
         name = "dropletElasticity",
-        label = "水滴果冻弹性回弹强度",
+        label = "水滴收拢回弹弹性",
         category = "水珠变小/变大与果冻弹性",
-        explanation = "水滴缩小触底时体积守恒的果冻形变幅度。",
-        visualEffect = "当水滴缩回到静止槽位时，横向产生微弹扩张、纵向微弹压扁，再弹回标准胶囊，带来水珠落地果冻质感。",
-        recommendation = "默认 0.35f；设为 0 关闭形变；设为 0.5f ~ 0.7f 呈现高弹性果冻质感。"
+        explanation = "控制水滴从当前尺寸收拢回到 inactive 静态所需的时间与过程中的物理弹性。",
+        visualEffect = "严格杜绝向外超额扩张；必须从当前状态尺寸平滑往回收缩，弹性越高收拢时间越柔润悠长且途中富有果冻弹性回弹；弹性越低收拢越迅捷无弹跳。",
+        recommendation = "默认 0.45f；推荐 0.35f ~ 0.65f。"
     ),
     "growDampingRatio" to PhysicsParamInfo(
         id = "growDampingRatio",
@@ -493,7 +493,7 @@ fun LiquidPhysicsTuningDialog(
                     ParamSliderItem(
                         id = "dropletElasticity",
                         name = "dropletElasticity",
-                        label = "水滴果冻弹性回弹强度 (缩小触底压扁微张幅度)",
+                        label = "水滴收拢回弹弹性 (回到 inactive 的时间与弹性)",
                         value = currentPhysics.dropletElasticity,
                         valueRange = 0.0f..1.0f,
                         format = { "${((it * 100).roundToInt() / 100f)}x" },

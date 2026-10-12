@@ -695,7 +695,7 @@ val customOptics = LiquidTabBarDefaults.optics(
                 ParamItem("dockingInertiaFactor", "Float", "1.0f", "Inertial impulse multiplier applied to fling velocity and docking displacement."),
                 ParamItem("growDampingRatio / growStiffness", "Float", "0.68f / 1350f", "High-speed snappy expansion dynamics with liquid surface tension bounce."),
                 ParamItem("shrinkDampingRatio / shrinkStiffness", "Float", "0.65f / 420f", "Soft, gradual easing dynamics when settling into a docked slot with elastic rebound."),
-                ParamItem("dropletElasticity", "Float", "0.35f", "Magnitude of jelly squash-and-stretch volume-conserving wobble when shrinking to rest."),
+                ParamItem("dropletElasticity", "Float", "0.45f", "Controls settling duration and harmonic jelly bounce dynamics when returning from active state to inactive rest."),
                 ParamItem("dockingShrinkThreshold", "Float", "0.35f", "Distance threshold to target slot before the traveling droplet begins shrinking.")
             ),
             codeExample = """val fluidPhysics = LiquidTabBarDefaults.physics(

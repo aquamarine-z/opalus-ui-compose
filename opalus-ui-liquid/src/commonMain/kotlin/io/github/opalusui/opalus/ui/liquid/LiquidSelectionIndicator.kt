@@ -43,11 +43,12 @@ internal fun LiquidSelectionIndicator(
 ) {
     val rawProgress = state.pressProgress
     val visualProgress = rawProgress.coerceIn(0f, 1f)
+    val elasticProgress = rawProgress.coerceIn(-0.25f, 1f)
 
     val currentIndicatorHeight = lerp(
         dimensions.indicatorIdleHeight,
         dimensions.indicatorActiveHeight,
-        visualProgress
+        elasticProgress.coerceIn(0f, 1f)
     )
 
     Box(
@@ -96,11 +97,11 @@ internal fun LiquidSelectionIndicator(
                     var sX = scale
                     var sY = scale
 
-                    // 水珠缩小触底果冻回弹：体积守恒的果冻晃动 (横向舒展/纵向挤压 交替振荡)
-                    val jellyWobble = state.jelly * physics.dropletElasticity
-                    if (jellyWobble != 0f) {
-                        sX *= (1f + jellyWobble * 0.45f)
-                        sY *= (1f - jellyWobble * 0.35f).coerceAtLeast(0.5f)
+                    // 触底微弹处理：当 elasticProgress < 0f 时，水滴触底微压扁回弹（严格不向外过量膨胀）
+                    if (elasticProgress < 0f) {
+                        val bottomBounce = elasticProgress * physics.dropletElasticity
+                        sX *= (1f - bottomBounce * 0.15f)
+                        sY *= (1f + bottomBounce * 0.20f).coerceAtLeast(0.7f)
                     }
 
                     if (visualProgress > 0.001f) {

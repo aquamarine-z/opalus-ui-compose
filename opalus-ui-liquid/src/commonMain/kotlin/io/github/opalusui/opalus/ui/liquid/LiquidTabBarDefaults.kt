@@ -90,8 +90,8 @@ data class LiquidTabBarPhysics(
     val shrinkDampingRatio: Float = 0.65f,
     val shrinkStiffness: Float = 420f,
 
-    // 水滴果冻回弹弹性程度：控制缩小触底时体积守恒的果冻形变弹性幅度
-    val dropletElasticity: Float = 0.35f,
+    // 水滴果冻回弹弹性程度：控制水珠松开后从当前尺寸收拢回到 inactive 静态所需的时间与过程中的物理弹性
+    val dropletElasticity: Float = 0.45f,
 
     // 吸附 item 时开始变小的距离阈值 (以 Tab 槽位跨度归一化单位计)
     val dockingShrinkThreshold: Float = 0.35f
@@ -204,7 +204,7 @@ object LiquidTabBarDefaults {
         growStiffness: Float = 1350f,
         shrinkDampingRatio: Float = 0.65f,
         shrinkStiffness: Float = 420f,
-        dropletElasticity: Float = 0.35f,
+        dropletElasticity: Float = 0.45f,
         dockingShrinkThreshold: Float = 0.35f
     ): LiquidTabBarPhysics = LiquidTabBarPhysics(
         maxOverhang = maxOverhang,

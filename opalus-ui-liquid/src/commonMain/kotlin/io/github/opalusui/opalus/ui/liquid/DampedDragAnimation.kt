@@ -1,13 +1,14 @@
 package io.github.opalusui.opalus.ui.liquid
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.MutatorMutex
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.withFrameMillis
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
@@ -18,6 +19,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
@@ -43,10 +45,19 @@ class DampedDragAnimation(
         get() = spring(physics.dockingDampingRatio, physics.dockingStiffness, visibilityThreshold)
     private val velocityAnimationSpec =
         spring(0.65f, 380f, visibilityThreshold * 10f)
-    private val growProgressAnimationSpec
+    private val growProgressAnimationSpec: SpringSpec<Float>
         get() = spring(physics.growDampingRatio, physics.growStiffness, 0.001f)
-    private val shrinkProgressAnimationSpec
-        get() = spring(physics.shrinkDampingRatio, physics.shrinkStiffness, 0.001f)
+    private val shrinkProgressAnimationSpec: SpringSpec<Float>
+        get() {
+            val elasticity = physics.dropletElasticity.coerceIn(0f, 1f)
+            val damping = physics.shrinkDampingRatio * (1.15f - 0.50f * elasticity)
+            val stiffness = physics.shrinkStiffness * (1.50f - 0.70f * elasticity)
+            return spring(
+                dampingRatio = damping.coerceIn(0.42f, 1.0f),
+                stiffness = stiffness.coerceIn(150f, 850f),
+                visibilityThreshold = 0.001f
+            )
+        }
     private val scaleXAnimationSpec =
         spring(0.65f, 280f, 0.001f)
     private val scaleYAnimationSpec =
@@ -106,6 +117,9 @@ class DampedDragAnimation(
         velocityTracker.resetTracking()
         snapJob?.cancel()
         pressJob?.cancel()
+        dragJob?.cancel()
+        isDragging = true
+        currentSimVelocity = 0f
         val token = ++animationToken
         pressJob = animationScope.launch {
             launch {
@@ -132,28 +146,76 @@ class DampedDragAnimation(
     }
 
     fun release() {
-        animateToValue(valueAnimation.targetValue)
+        isDragging = false
+        animateToValue(dragTargetValue)
     }
 
     private var dragJob: Job? = null
+    private var dragTargetValue: Float = initialValue
+    private var isDragging: Boolean = false
+    private var currentSimVelocity: Float = 0f
 
-    fun updateValue(value: Float) {
-        val targetValue = value.coerceIn(valueRange)
-        dragJob?.cancel()
+    private fun startDragSimulationIfNeeded() {
+        if (dragJob != null && dragJob!!.isActive) return
         dragJob = animationScope.launch {
-            val currentVel = valueAnimation.velocity
-            valueAnimation.animateTo(
-                targetValue = targetValue,
-                animationSpec = dragAnimationSpec,
-                initialVelocity = currentVel
-            ) {
-                updateVelocity()
+            var lastFrameTimeNanos = 0L
+            var currentPos = valueAnimation.value
+
+            while (isActive && isDragging) {
+                val nowNanos = withFrameNanos { it }
+                if (lastFrameTimeNanos == 0L) {
+                    lastFrameTimeNanos = nowNanos
+                    continue
+                }
+                val dt = ((nowNanos - lastFrameTimeNanos) / 1_000_000_000.0).toFloat().coerceIn(0.001f, 0.05f)
+                lastFrameTimeNanos = nowNanos
+
+                val k = physics.dragStiffness
+                val zeta = physics.dragDampingRatio
+                val c = 2f * zeta * kotlin.math.sqrt(k)
+
+                // 4 次子迭代保证连续物理积分的稳定性
+                val subSteps = 4
+                val subDt = dt / subSteps
+                val target = dragTargetValue
+
+                for (i in 0 until subSteps) {
+                    val fSpring = k * (target - currentPos)
+                    val fDamping = -c * currentSimVelocity
+                    val a = fSpring + fDamping
+                    currentSimVelocity += a * subDt
+                    currentPos += currentSimVelocity * subDt
+                }
+
+                valueAnimation.snapTo(currentPos)
+                velocityAnimation.snapTo(currentSimVelocity)
+
+                velocityTracker.addPosition(
+                    timeMark.elapsedNow().inWholeMilliseconds,
+                    Offset(currentPos, 0f)
+                )
+
+                if (abs(currentPos - target) < 0.0005f && abs(currentSimVelocity) < 0.005f) {
+                    currentPos = target
+                    currentSimVelocity = 0f
+                    valueAnimation.snapTo(target)
+                    velocityAnimation.snapTo(0f)
+                    lastFrameTimeNanos = 0L
+                    break
+                }
             }
         }
     }
 
+    fun updateValue(value: Float) {
+        dragTargetValue = value.coerceIn(valueRange)
+        isDragging = true
+        startDragSimulationIfNeeded()
+    }
+
     fun animateToValue(value: Float) {
         val target = value.coerceIn(valueRange)
+        isDragging = false
         dragJob?.cancel()
         pressJob?.cancel()
         snapJob?.cancel()
@@ -175,31 +237,23 @@ class DampedDragAnimation(
                                     .first()
                             }
                         }
-                        launch {
-                            // 水珠缩小触底果冻回弹：进入吸附收拢区间时，瞬时注入果冻形变脉冲 (1.0f)
-                            // 欠阻尼弹簧驱动横向与纵向交替回弹振荡，在缩小与完全进入 inactive 时呈现水滴/果冻弹性质感
-                            jellyAnimation.snapTo(1f)
-                            jellyAnimation.animateTo(
-                                targetValue = 0f,
-                                animationSpec = spring(
-                                    dampingRatio = (physics.shrinkDampingRatio * 0.78f).coerceIn(0.40f, 0.75f),
-                                    stiffness = (physics.shrinkStiffness * 0.75f).coerceIn(160f, 600f),
-                                    visibilityThreshold = 0.001f
-                                )
-                            )
-                        }
+                        // 启动收拢动画：严格从当前状态尺寸直接往回收缩，杜绝任何超出当前尺寸的向外扩张
                         pressProgressAnimation.animateTo(0f, shrinkProgressAnimationSpec)
                     }
 
                     launch {
-                        val currentVel = valueAnimation.velocity
+                        val trackerVel = velocityTracker.calculateVelocity().x
                         val rangeSpan = (valueRange.endInclusive - valueRange.start).coerceAtLeast(0.001f)
-                        val trackerVel = velocityTracker.calculateVelocity().x / rangeSpan
-                        val initialVel = if (trackerVel.isFinite() && abs(trackerVel) > 0.01f) {
-                            trackerVel * physics.dockingInertiaFactor
+                        val normalizedTrackerVel = trackerVel / rangeSpan
+                        // 优先继承拖拽物理仿真时的瞬时速度，确保反向或甩动时拥有最真实的水滴惯性
+                        val releaseVel = if (abs(currentSimVelocity) > 0.01f) {
+                            currentSimVelocity
+                        } else if (normalizedTrackerVel.isFinite() && abs(normalizedTrackerVel) > 0.01f) {
+                            normalizedTrackerVel
                         } else {
-                            currentVel * physics.dockingInertiaFactor
+                            valueAnimation.velocity
                         }
+                        val initialVel = releaseVel * physics.dockingInertiaFactor
 
                         valueAnimation.animateTo(
                             targetValue = target,
@@ -217,6 +271,7 @@ class DampedDragAnimation(
                     scaleYAnimation.snapTo(initialScale)
                     velocityAnimation.snapTo(0f)
                     jellyAnimation.snapTo(0f)
+                    currentSimVelocity = 0f
                 }
             }
         }
