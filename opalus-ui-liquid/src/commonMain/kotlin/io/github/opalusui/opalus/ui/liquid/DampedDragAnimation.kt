@@ -195,15 +195,25 @@ class DampedDragAnimation(
                     currentSimVelocity += a * subDt
                     currentPos += currentSimVelocity * subDt
 
-                    // 严密物理边界碰撞约束：杜绝高速挥甩拖拽时因惯性飞出设定的 X 边界
-                    if (currentPos < valueRange.start) {
-                        currentPos = valueRange.start
-                        if (currentSimVelocity < 0f) {
+                    // 严密物理边界碰撞约束：定值反向微弹与流体阻尼（拉过之后轻微弹一下，且阻尼不取决于速度）
+                    val minBound = valueRange.start
+                    val maxBound = valueRange.endInclusive
+                    val fixedBounceSpeed = 0.95f * physics.dropletElasticity.coerceIn(0.4f, 1.6f)
+
+                    if (currentPos < minBound) {
+                        currentPos = minBound
+                        if (currentSimVelocity < -0.10f) {
+                            // 高速挥甩撞击左侧边界：以定值冲量轻微反弹，杜绝随进入速度放大飞出
+                            currentSimVelocity = fixedBounceSpeed
+                        } else {
                             currentSimVelocity = 0f
                         }
-                    } else if (currentPos > valueRange.endInclusive) {
-                        currentPos = valueRange.endInclusive
-                        if (currentSimVelocity > 0f) {
+                    } else if (currentPos > maxBound) {
+                        currentPos = maxBound
+                        if (currentSimVelocity > 0.10f) {
+                            // 高速挥甩撞击右侧边界：以定值冲量轻微反弹，杜绝随进入速度放大飞出
+                            currentSimVelocity = -fixedBounceSpeed
+                        } else {
                             currentSimVelocity = 0f
                         }
                     }
