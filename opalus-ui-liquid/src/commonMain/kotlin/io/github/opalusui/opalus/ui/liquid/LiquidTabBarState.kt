@@ -38,6 +38,7 @@ class LiquidTabBarState(
         pressedScale = physics.platterActiveScale,
         pressedScaleX = physics.platterActiveScaleX,
         pressedScaleY = physics.platterActiveScaleY,
+        tabsCount = tabsCount,
         initialPhysics = initialPhysics,
         onDragStarted = {},
         onDragStopped = {},
@@ -61,13 +62,14 @@ class LiquidTabBarState(
     }
 
     /**
-     * 根据当前容器宽度与 maxOverhang 物理参数，动态约束水滴 X 轴允许移动的绝对物理区间
+     * 根据当前容器宽度与 maxOverhang/overhangCushion 物理参数，动态约束水滴 X 轴允许移动的绝对物理区间
      */
-    fun updateOverhangBounds(tabWidth: Float, maxOverhangPx: Float) {
+    fun updateOverhangBounds(tabWidth: Float, maxOverhangPx: Float, overhangCushionPx: Float = 0f) {
         if (tabWidth <= 0f) return
         val maxOverhangSlots = (maxOverhangPx / tabWidth).coerceAtLeast(0.001f)
-        val minBound = -maxOverhangSlots
-        val maxBound = (tabsCount - 1).toFloat() + maxOverhangSlots
+        val cushionSlots = (overhangCushionPx / tabWidth).coerceAtLeast(0f)
+        val minBound = -maxOverhangSlots - cushionSlots
+        val maxBound = (tabsCount - 1).toFloat() + maxOverhangSlots + cushionSlots
         dampedAnimation.valueRange = minBound..maxBound
     }
 
@@ -160,9 +162,10 @@ class LiquidTabBarState(
         tabWidth: Float,
         padHorizontalPx: Float,
         isLtr: Boolean,
-        maxOverhangPx: Float = tabWidth * 0.38f
+        maxOverhangPx: Float = tabWidth * 0.38f,
+        overhangCushionPx: Float = 0f
     ) {
-        updateOverhangBounds(tabWidth, maxOverhangPx)
+        updateOverhangBounds(tabWidth, maxOverhangPx, overhangCushionPx)
         dampedAnimation.press()
         val target = computeTargetFromPointer(x, totalWidth, tabWidth, padHorizontalPx, isLtr, maxOverhangPx)
         dampedAnimation.updateValue(target)
@@ -186,9 +189,10 @@ class LiquidTabBarState(
         tabWidth: Float,
         padHorizontalPx: Float,
         isLtr: Boolean,
-        maxOverhangPx: Float = tabWidth * 0.38f
+        maxOverhangPx: Float = tabWidth * 0.38f,
+        overhangCushionPx: Float = 0f
     ) {
-        updateOverhangBounds(tabWidth, maxOverhangPx)
+        updateOverhangBounds(tabWidth, maxOverhangPx, overhangCushionPx)
         val target = computeTargetFromPointer(x, totalWidth, tabWidth, padHorizontalPx, isLtr, maxOverhangPx)
         dampedAnimation.updateValue(target)
 

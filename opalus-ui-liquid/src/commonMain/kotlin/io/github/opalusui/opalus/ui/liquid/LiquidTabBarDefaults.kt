@@ -68,6 +68,10 @@ data class LiquidTabBarOptics(
 data class LiquidTabBarPhysics(
     val maxOverhang: Dp = 14.dp,
     val overhangResistance: Float = 1.8f,
+    val overhangBounceAmplitude: Float = 1.90f,
+    val overhangCushion: Dp = 4.dp,
+    val overhangSettlingStiffness: Float = 85f,
+    val overhangSettlingDampingRatio: Float = 0.60f,
     val platterActiveScaleX: Float = 1.03f,
     val platterActiveScaleY: Float = 1.03f,
     val itemActiveScale: Float = 1.05f,
@@ -197,6 +201,10 @@ object LiquidTabBarDefaults {
     fun physics(
         maxOverhang: Dp = 14.dp,
         overhangResistance: Float = 1.8f,
+        overhangBounceAmplitude: Float = 1.90f,
+        overhangCushion: Dp = 4.dp,
+        overhangSettlingStiffness: Float = 85f,
+        overhangSettlingDampingRatio: Float = 0.60f,
         platterActiveScaleX: Float = 1.03f,
         platterActiveScaleY: Float = 1.03f,
         itemActiveScale: Float = 1.05f,
@@ -220,6 +228,10 @@ object LiquidTabBarDefaults {
     ): LiquidTabBarPhysics = LiquidTabBarPhysics(
         maxOverhang = maxOverhang,
         overhangResistance = overhangResistance,
+        overhangBounceAmplitude = overhangBounceAmplitude,
+        overhangCushion = overhangCushion,
+        overhangSettlingStiffness = overhangSettlingStiffness,
+        overhangSettlingDampingRatio = overhangSettlingDampingRatio,
         platterActiveScaleX = platterActiveScaleX,
         platterActiveScaleY = platterActiveScaleY,
         itemActiveScale = itemActiveScale,

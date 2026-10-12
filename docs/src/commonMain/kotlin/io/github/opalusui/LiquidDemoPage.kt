@@ -732,6 +732,10 @@ val customOptics = LiquidTabBarDefaults.optics(
             signature = """@Immutable data class LiquidTabBarPhysics(
     val maxOverhang: Dp = 14.dp,
     val overhangResistance: Float = 1.8f,
+    val overhangBounceAmplitude: Float = 1.90f,
+    val overhangCushion: Dp = 4.dp,
+    val overhangSettlingStiffness: Float = 85f,
+    val overhangSettlingDampingRatio: Float = 0.60f,
     val platterActiveScaleX: Float = 1.03f,
     val platterActiveScaleY: Float = 1.03f,
     val itemActiveScale: Float = 1.05f,
@@ -757,6 +761,9 @@ val customOptics = LiquidTabBarDefaults.optics(
             parameters = listOf(
                 ParamItem("maxOverhang", "Dp", "14.dp", "Maximum distance in Dp the droplet is allowed to be dragged past the navbar edge along the X axis."),
                 ParamItem("overhangResistance", "Float", "1.8f", "Rubber-band exponent dampening pointer drag outside boundary slots."),
+                ParamItem("overhangBounceAmplitude", "Float", "1.90f", "Fixed collision rebound impulse independent of pointer fling speed upon hitting boundary."),
+                ParamItem("overhangCushion", "Dp", "4.dp", "Fixed outward cushion displacement margin allowing subtle fluid compression at edge."),
+                ParamItem("overhangSettlingStiffness / Damping", "Float", "85f / 0.60f", "Softer returning spring and gentle jelly oscillation when settling back from boundary."),
                 ParamItem("platterActiveScaleX", "Float", "1.03f", "Horizontal scale multiplier of the navbar platter body when active/pressed."),
                 ParamItem("platterActiveScaleY", "Float", "1.03f", "Vertical scale multiplier of the navbar platter body when active/pressed."),
                 ParamItem("itemActiveScale", "Float", "1.05f", "Scale applied to inactive items during drag."),

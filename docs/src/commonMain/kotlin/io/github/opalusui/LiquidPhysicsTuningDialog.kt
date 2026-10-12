@@ -192,6 +192,46 @@ private val physicsParamDocs = mapOf(
         decreaseEffect = "调低（低于 10.dp）：水滴受强硬物理边界拘束，几乎无法拉出两端胶囊外。",
         recommendation = "建议 10.dp ~ 25.dp（默认 14.dp）。"
     ),
+    "overhangCushion" to TuningParamInfo(
+        id = "overhangCushion",
+        name = "overhangCushion",
+        label = "边界外固定碰撞缓冲余量",
+        category = "边界超界拉伸与底座形变",
+        explanation = "水滴撞击最大超界边界时允许额外压缩延展的定值缓冲距离，与进入手速严格解耦。",
+        increaseEffect = "调高（高于 6.dp）：撞边时允许稍微往外多出一点缓冲形变，边界柔软度更高。",
+        decreaseEffect = "调低（低于 2.dp）：撞边缓冲距离极小，触边即止。",
+        recommendation = "建议 2.dp ~ 8.dp（默认 4.dp）。"
+    ),
+    "overhangBounceAmplitude" to TuningParamInfo(
+        id = "overhangBounceAmplitude",
+        name = "overhangBounceAmplitude",
+        label = "边界碰撞定值反弹系数",
+        category = "边界超界拉伸与底座形变",
+        explanation = "高速挥甩或拖拽触及边界缓冲时施加的定值反弹冲量，完全独立于手势进入速度，拉过之后轻微回弹一下。",
+        increaseEffect = "调高（高于 2.50）：撞击边界反弹力度与幅度更加饱满鲜明。",
+        decreaseEffect = "调低（低于 1.00）：撞击边界反弹极轻微，趋向于软停靠。",
+        recommendation = "建议 1.20 ~ 2.50（默认 1.90）。"
+    ),
+    "overhangSettlingStiffness" to TuningParamInfo(
+        id = "overhangSettlingStiffness",
+        name = "overhangSettlingStiffness",
+        label = "超界回正弹簧刚度",
+        category = "边界超界拉伸与底座形变",
+        explanation = "水滴处于超界/缓冲拉伸区域时拉回目标位置的物理弹簧刚度。刚度越小，回正速度变慢，呈现柔润的流体延展感。",
+        increaseEffect = "调高（高于 150）：拉出边界后回正速度快、刚性强。",
+        decreaseEffect = "调低（低于 60）：拉出边界后回正速度明显变慢，果冻质感极为悠长。",
+        recommendation = "建议 50 ~ 130（默认 85）。"
+    ),
+    "overhangSettlingDampingRatio" to TuningParamInfo(
+        id = "overhangSettlingDampingRatio",
+        name = "overhangSettlingDampingRatio",
+        label = "超界回正阻尼比",
+        category = "边界超界拉伸与底座形变",
+        explanation = "水滴从超界拉伸区回正归位过程中的阻尼比。适度欠阻尼赋予水滴回正后轻微晃动回弹的液体质感。",
+        increaseEffect = "调高（高于 0.85）：回正过程单调平滑，几乎无多余晃动。",
+        decreaseEffect = "调低（低于 0.50）：回正后在端点附近持续微幅抖动晃动，果冻弹性显著。",
+        recommendation = "建议 0.45 ~ 0.80（默认 0.60）。"
+    ),
     "platterActiveScaleX" to TuningParamInfo(
         id = "platterActiveScaleX",
         name = "platterActiveScaleX",
@@ -1104,6 +1144,66 @@ fun LiquidPhysicsTuningDialog(
                             onHover = { activeParamId = "maxOverhang" },
                             onValueChange = {
                                 onPhysicsChange(currentPhysics.copy(maxOverhang = it.dp))
+                            }
+                        )
+
+                        ParamSliderItem(
+                            id = "overhangCushion",
+                            name = "overhangCushion",
+                            label = "边界外固定碰撞缓冲余量 (定值缓冲外延)",
+                            value = currentPhysics.overhangCushion.value,
+                            valueRange = 0f..20f,
+                            format = { "${it.roundToInt()} dp" },
+                            recommendation = "2.dp ~ 8.dp (默认 4.dp)",
+                            isActive = activeParamId == "overhangCushion",
+                            onHover = { activeParamId = "overhangCushion" },
+                            onValueChange = {
+                                onPhysicsChange(currentPhysics.copy(overhangCushion = it.dp))
+                            }
+                        )
+
+                        ParamSliderItem(
+                            id = "overhangBounceAmplitude",
+                            name = "overhangBounceAmplitude",
+                            label = "边界碰撞定值反弹系数 (与手速解耦的反弹冲量)",
+                            value = currentPhysics.overhangBounceAmplitude,
+                            valueRange = 0f..4.0f,
+                            format = { "${((it * 100).roundToInt() / 100f)}" },
+                            recommendation = "1.20 ~ 2.50 (默认 1.90)",
+                            isActive = activeParamId == "overhangBounceAmplitude",
+                            onHover = { activeParamId = "overhangBounceAmplitude" },
+                            onValueChange = {
+                                onPhysicsChange(currentPhysics.copy(overhangBounceAmplitude = it))
+                            }
+                        )
+
+                        ParamSliderItem(
+                            id = "overhangSettlingStiffness",
+                            name = "overhangSettlingStiffness",
+                            label = "超界回正弹簧刚度 (数值越小回正越舒缓慢速)",
+                            value = currentPhysics.overhangSettlingStiffness,
+                            valueRange = 30f..300f,
+                            format = { "${it.roundToInt()}" },
+                            recommendation = "50 ~ 130 (默认 85)",
+                            isActive = activeParamId == "overhangSettlingStiffness",
+                            onHover = { activeParamId = "overhangSettlingStiffness" },
+                            onValueChange = {
+                                onPhysicsChange(currentPhysics.copy(overhangSettlingStiffness = it))
+                            }
+                        )
+
+                        ParamSliderItem(
+                            id = "overhangSettlingDampingRatio",
+                            name = "overhangSettlingDampingRatio",
+                            label = "超界回正阻尼比 (欠阻尼呈现水珠微弹流动感)",
+                            value = currentPhysics.overhangSettlingDampingRatio,
+                            valueRange = 0.30f..1.20f,
+                            format = { "${((it * 100).roundToInt() / 100f)}" },
+                            recommendation = "0.45 ~ 0.80 (默认 0.60)",
+                            isActive = activeParamId == "overhangSettlingDampingRatio",
+                            onHover = { activeParamId = "overhangSettlingDampingRatio" },
+                            onValueChange = {
+                                onPhysicsChange(currentPhysics.copy(overhangSettlingDampingRatio = it))
                             }
                         )
 

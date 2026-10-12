@@ -35,6 +35,7 @@ class DampedDragAnimation(
     val pressedScale: Float = 1.03f,
     val pressedScaleX: Float = pressedScale,
     val pressedScaleY: Float = pressedScale,
+    val tabsCount: Int = 1,
     initialPhysics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics(),
     val onDragStarted: DampedDragAnimation.(position: Offset) -> Unit = {},
     val onDragStopped: DampedDragAnimation.() -> Unit = {},
@@ -179,39 +180,47 @@ class DampedDragAnimation(
                 val dt = ((nowNanos - lastFrameTimeNanos) / 1_000_000_000.0).toFloat().coerceIn(0.001f, 0.05f)
                 lastFrameTimeNanos = nowNanos
 
-                val k = physics.dragStiffness
-                val zeta = physics.dragDampingRatio
-                val c = 2f * zeta * kotlin.math.sqrt(k)
-
                 // 4 次子迭代保证连续物理积分的稳定性
                 val subSteps = 4
                 val subDt = dt / subSteps
                 val target = dragTargetValue
+                val maxTab = (tabsCount - 1).toFloat().coerceAtLeast(0f)
 
                 for (i in 0 until subSteps) {
+                    // 当处于边界伸缩区时，平滑过渡到回正刚度与阻尼，回正速度更柔和舒缓
+                    val overhangDepth = when {
+                        currentPos < 0f -> -currentPos
+                        currentPos > maxTab -> currentPos - maxTab
+                        else -> 0f
+                    }
+                    val blend = (overhangDepth * 2.5f).coerceIn(0f, 1f)
+                    val k = (1f - blend) * physics.dragStiffness + blend * physics.overhangSettlingStiffness
+                    val zeta = (1f - blend) * physics.dragDampingRatio + blend * physics.overhangSettlingDampingRatio
+                    val c = 2f * zeta * kotlin.math.sqrt(k)
+
                     val fSpring = k * (target - currentPos)
                     val fDamping = -c * currentSimVelocity
                     val a = fSpring + fDamping
                     currentSimVelocity += a * subDt
                     currentPos += currentSimVelocity * subDt
 
-                    // 严密物理边界碰撞约束：定值反向微弹与流体阻尼（拉过之后轻微弹一下，且阻尼不取决于速度）
+                    // 严密物理边界碰撞约束：定值反弹冲量与固定缓冲限位（拉过之后轻微弹一下，回正更慢，且弹性幅度严格与手速解耦）
                     val minBound = valueRange.start
                     val maxBound = valueRange.endInclusive
-                    val fixedBounceSpeed = 0.95f * physics.dropletElasticity.coerceIn(0.4f, 1.6f)
+                    val fixedBounceSpeed = physics.overhangBounceAmplitude * physics.dropletElasticity.coerceIn(0.4f, 1.6f)
 
                     if (currentPos < minBound) {
                         currentPos = minBound
-                        if (currentSimVelocity < -0.10f) {
-                            // 高速挥甩撞击左侧边界：以定值冲量轻微反弹，杜绝随进入速度放大飞出
+                        if (currentSimVelocity < -0.05f) {
+                            // 撞击左侧最大物理缓冲限位：以定值冲量轻微反弹，杜绝随手势速度无限放大
                             currentSimVelocity = fixedBounceSpeed
                         } else {
                             currentSimVelocity = 0f
                         }
                     } else if (currentPos > maxBound) {
                         currentPos = maxBound
-                        if (currentSimVelocity > 0.10f) {
-                            // 高速挥甩撞击右侧边界：以定值冲量轻微反弹，杜绝随进入速度放大飞出
+                        if (currentSimVelocity > 0.05f) {
+                            // 撞击右侧最大物理缓冲限位：以定值冲量轻微反弹，杜绝随手势速度无限放大
                             currentSimVelocity = -fixedBounceSpeed
                         } else {
                             currentSimVelocity = 0f

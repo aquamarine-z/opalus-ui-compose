@@ -69,6 +69,10 @@ fun getModifiedParamsCount(
 
     if (physics.maxOverhang.differsFrom(defPhys.maxOverhang)) count++
     if (physics.overhangResistance.differsFrom(defPhys.overhangResistance)) count++
+    if (physics.overhangBounceAmplitude.differsFrom(defPhys.overhangBounceAmplitude)) count++
+    if (physics.overhangCushion.differsFrom(defPhys.overhangCushion)) count++
+    if (physics.overhangSettlingStiffness.differsFrom(defPhys.overhangSettlingStiffness)) count++
+    if (physics.overhangSettlingDampingRatio.differsFrom(defPhys.overhangSettlingDampingRatio)) count++
     if (physics.platterActiveScaleX.differsFrom(defPhys.platterActiveScaleX)) count++
     if (physics.platterActiveScaleY.differsFrom(defPhys.platterActiveScaleY)) count++
     if (physics.itemActiveScale.differsFrom(defPhys.itemActiveScale)) count++
@@ -150,6 +154,10 @@ fun buildDiffConfigJson(
 
     addDp(physEntries, "maxOverhang", physics.maxOverhang, defPhys.maxOverhang)
     addFloat(physEntries, "overhangResistance", physics.overhangResistance, defPhys.overhangResistance)
+    addFloat(physEntries, "overhangBounceAmplitude", physics.overhangBounceAmplitude, defPhys.overhangBounceAmplitude)
+    addDp(physEntries, "overhangCushion", physics.overhangCushion, defPhys.overhangCushion)
+    addFloat(physEntries, "overhangSettlingStiffness", physics.overhangSettlingStiffness, defPhys.overhangSettlingStiffness)
+    addFloat(physEntries, "overhangSettlingDampingRatio", physics.overhangSettlingDampingRatio, defPhys.overhangSettlingDampingRatio)
     addFloat(physEntries, "platterActiveScaleX", physics.platterActiveScaleX, defPhys.platterActiveScaleX)
     addFloat(physEntries, "platterActiveScaleY", physics.platterActiveScaleY, defPhys.platterActiveScaleY)
     addFloat(physEntries, "itemActiveScale", physics.itemActiveScale, defPhys.itemActiveScale)
