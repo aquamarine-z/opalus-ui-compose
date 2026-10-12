@@ -48,7 +48,6 @@ import io.github.opalusui.opalus.ui.liquid.LiquidTabItem
 
 @Composable
 fun LiquidDemoPage(isDarkTheme: Boolean) {
-    var chromaticAberration by remember { mutableStateOf(true) }
     var selectedTab1 by remember { mutableStateOf(0) }
     val tabs1 = remember { listOf("Home", "Explore", "Favorites", "Profile") }
 
@@ -56,6 +55,9 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
     val tabs2 = remember { listOf("Dashboard", "Analytics", "Settings") }
 
     var physics by remember { mutableStateOf(LiquidTabBarDefaults.physics()) }
+    var optics by remember {
+        mutableStateOf(LiquidTabBarDefaults.optics(isDark = isDarkTheme, chromaticAberration = true))
+    }
     var showPhysicsDialog by remember { mutableStateOf(false) }
 
     val playgroundBackdrop = rememberLayerBackdrop()
@@ -115,8 +117,8 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Switch(
-                                        checked = chromaticAberration,
-                                        onCheckedChange = { chromaticAberration = it }
+                                        checked = optics.chromaticAberration,
+                                        onCheckedChange = { optics = optics.copy(chromaticAberration = it) }
                                     )
                                 }
 
@@ -124,7 +126,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                                     onClick = { showPhysicsDialog = true },
                                     shape = RoundedCornerShape(10.dp)
                                 ) {
-                                    Text("动力学调优", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("参数调优", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -160,8 +162,8 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Switch(
-                                        checked = chromaticAberration,
-                                        onCheckedChange = { chromaticAberration = it }
+                                        checked = optics.chromaticAberration,
+                                        onCheckedChange = { optics = optics.copy(chromaticAberration = it) }
                                     )
                                 }
 
@@ -169,7 +171,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                                     onClick = { showPhysicsDialog = true },
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Text("Physics Tuner / 动力学调优", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("Physics & Optics Tuner / 参数调优", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -269,10 +271,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                                 activeItemColor = MaterialTheme.colorScheme.primary,
                                 inactiveItemColor = if (isDarkTheme) Color(0xFFCBD5E1) else Color(0xFF64748B)
                             ),
-                            optics = LiquidTabBarDefaults.optics(
-                                isDark = isDarkTheme,
-                                chromaticAberration = chromaticAberration
-                            ),
+                            optics = optics,
                             physics = physics,
                             modifier = Modifier
                                 .widthIn(max = 440.dp)
@@ -361,6 +360,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                                 activeItemColor = MaterialTheme.colorScheme.primary,
                                 inactiveItemColor = MaterialTheme.colorScheme.onSurfaceVariant
                             ),
+                            optics = optics,
                             physics = physics,
                             modifier = Modifier.widthIn(max = 380.dp),
                             inactiveItem = { _, item ->
@@ -791,6 +791,8 @@ Box {
             isDarkTheme = isDarkTheme,
             currentPhysics = physics,
             onPhysicsChange = { physics = it },
+            currentOptics = optics,
+            onOpticsChange = { optics = it },
             onDismissRequest = { showPhysicsDialog = false }
         )
     }
