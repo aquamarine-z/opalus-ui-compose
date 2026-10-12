@@ -79,8 +79,8 @@ private val physicsParamDocs = mapOf(
         category = "槽位吸附与惯性进入",
         explanation = "控制水滴飞入目标槽位时的振荡阻尼比。欠阻尼状态赋予水滴自然冲量过冲。",
         increaseEffect = "调高（接近 1.0f）：水滴飞入槽位时几乎没有左右过冲与摇晃，平稳直入停靠。",
-        decreaseEffect = "调低（低于 0.55f）：水滴从左进入向右偏转、从右进入向左偏转的幅度显著加深，回弹抖动更加剧烈灵动。",
-        recommendation = "建议 0.55f ~ 0.65f（默认 0.62f），呈现自然轻盈的液体惯性。"
+        decreaseEffect = "调低（低于 0.65f）：水滴从左进入向右偏转、从右进入向左偏转的幅度显著加深，回弹抖动更加剧烈灵动。",
+        recommendation = "建议 0.75f ~ 0.90f（默认 0.85f），呈现轻柔高效的液体停靠。"
     ),
     "dockingStiffness" to TuningParamInfo(
         id = "dockingStiffness",
@@ -90,7 +90,7 @@ private val physicsParamDocs = mapOf(
         explanation = "水滴产生惯性偏转后，弹簧拉力将其回正到槽位中心的恢复速度与力量。",
         increaseEffect = "调高（高于 700f）：偏转后瞬间归位，吸附干脆利落、反应极快。",
         decreaseEffect = "调低（低于 400f）：偏转后回正周期漫长，水滴像果冻一样在槽位中心左右慢速晃动。",
-        recommendation = "建议 500f ~ 700f（默认 600f），兼顾灵动冲量与高效归正。"
+        recommendation = "建议 450f ~ 650f（默认 550f），兼顾灵动冲量与高效归正。"
     ),
     "dockingInertiaFactor" to TuningParamInfo(
         id = "dockingInertiaFactor",
@@ -98,9 +98,9 @@ private val physicsParamDocs = mapOf(
         label = "槽位惯性定值偏转倍率",
         category = "槽位吸附与惯性进入",
         explanation = "控制水滴飞入槽位时的定值惯性偏转/冲量过冲大小。严格定值，与飞行距离与飞行时长无关。",
-        increaseEffect = "调高（高于 1.2f）：进入槽位时定值过冲幅度放大，冲击感与回弹更明显。",
-        decreaseEffect = "调低（低于 0.6f / 设为 0）：定值过冲幅度缩小或关闭，水滴平稳直入槽位中心无偏转。",
-        recommendation = "建议 0.8f ~ 1.3f（默认 1.0f）。"
+        increaseEffect = "调高（高于 0.8f）：进入槽位时定值过冲幅度放大，冲击感与回弹更明显。",
+        decreaseEffect = "调低（设为 0）：彻底关闭过冲偏转，水滴平稳直入槽位中心无偏转。",
+        recommendation = "建议 0.0f ~ 0.5f（默认 0.0f）。"
     ),
     "dockingShrinkThreshold" to TuningParamInfo(
         id = "dockingShrinkThreshold",
@@ -119,8 +119,8 @@ private val physicsParamDocs = mapOf(
         category = "水珠展开与收拢弹性",
         explanation = "水珠松手吸附变小过程中的基础弹簧阻尼比。",
         increaseEffect = "调高（接近 1.0f）：缩小过程平缓线性，无回弹振荡。",
-        decreaseEffect = "调低（低于 0.55f）：缩小过程伴随明显的欠阻尼表面张力抖动回弹。",
-        recommendation = "建议 0.58f ~ 0.72f（默认 0.65f）。"
+        decreaseEffect = "调低（低于 0.45f）：缩小过程伴随明显的欠阻尼表面张力抖动回弹。",
+        recommendation = "建议 0.35f ~ 0.50f（默认 0.40f）。"
     ),
     "shrinkStiffness" to TuningParamInfo(
         id = "shrinkStiffness",
@@ -130,7 +130,7 @@ private val physicsParamDocs = mapOf(
         explanation = "水珠退出激活态、收拢变小的基础恢复弹簧刚度。",
         increaseEffect = "调高（高于 600f）：变小过程极速收紧，迅速回到静态 inactive。",
         decreaseEffect = "调低（低于 280f）：收拢过程悠闲柔润，像慢镜头液滴平稳缩回。",
-        recommendation = "建议 320f ~ 500f（默认 420f）。"
+        recommendation = "建议 150f ~ 300f（默认 180f）。"
     ),
     "dropletElasticity" to TuningParamInfo(
         id = "dropletElasticity",
@@ -138,9 +138,9 @@ private val physicsParamDocs = mapOf(
         label = "水滴收拢回弹弹性",
         category = "水珠展开与收拢弹性",
         explanation = "综合调控水滴松手后从当前尺寸回到 inactive 静态所需的时间与欠阻尼表面张力弹性。",
-        increaseEffect = "调高（0.6x ~ 1.0x）：收拢耗时更长更柔润，触底时产生明显的流体欠阻尼弹性抖动（全过程严格不向外过量膨胀）。",
-        decreaseEffect = "调低（0.0x ~ 0.3x）：收拢迅捷干脆，高刚度直接缩回静态，无多余弹性振荡。",
-        recommendation = "建议 0.35x ~ 0.65x（默认 0.45x）。"
+        increaseEffect = "调高（0.8x ~ 1.0x）：收拢耗时更长更柔润，触底时产生充分的流体欠阻尼弹性抖动（全过程严格不向外过量膨胀）。",
+        decreaseEffect = "调低（0.0x ~ 0.4x）：收拢迅捷干脆，高刚度直接缩回静态，无多余弹性振荡。",
+        recommendation = "建议 0.80x ~ 1.00x（默认 1.0x）。"
     ),
     "growDampingRatio" to TuningParamInfo(
         id = "growDampingRatio",
@@ -148,9 +148,9 @@ private val physicsParamDocs = mapOf(
         label = "水珠展开阻尼比",
         category = "水珠展开与收拢弹性",
         explanation = "手指或光标按下瞬间水珠向外膨胀成型的弹性阻尼比。",
-        increaseEffect = "调高（高于 0.8f）：展开过程平稳渐变，无冲出弹性。",
-        decreaseEffect = "调低（低于 0.6f）：水滴破膜而出时产生充满活力的饱满冲出与表面张力微弹跳。",
-        recommendation = "建议 0.62f ~ 0.72f（默认 0.68f）。"
+        increaseEffect = "调高（高于 0.7f）：展开过程平稳渐变，无冲出弹性。",
+        decreaseEffect = "调低（低于 0.5f）：水滴破膜而出时产生充满活力的饱满冲出与表面张力微弹跳。",
+        recommendation = "建议 0.40f ~ 0.55f（默认 0.45f）。"
     ),
     "growStiffness" to TuningParamInfo(
         id = "growStiffness",
@@ -158,9 +158,9 @@ private val physicsParamDocs = mapOf(
         label = "水珠展开刚度",
         category = "水珠展开与收拢弹性",
         explanation = "光标按下瞬间水珠成型的爆发速度与响应拉力。",
-        increaseEffect = "调高（高于 1400f）：手指一碰屏幕水滴瞬时爆发成型，极度跟手灵敏。",
-        decreaseEffect = "调低（低于 800f）：按下时光感和水珠缓慢膨胀延展，响应略显迟钝软绵。",
-        recommendation = "建议 1100f ~ 1500f（默认 1350f）。"
+        increaseEffect = "调高（高于 1600f）：手指一碰屏幕水滴瞬时爆发成型，极度跟手灵敏。",
+        decreaseEffect = "调低（低于 1000f）：按下时光感和水珠缓慢膨胀延展，响应略显迟钝软绵。",
+        recommendation = "建议 1200f ~ 1600f（默认 1470f）。"
     ),
     "dragDampingRatio" to TuningParamInfo(
         id = "dragDampingRatio",
@@ -168,9 +168,9 @@ private val physicsParamDocs = mapOf(
         label = "手势拖拽位移阻尼比",
         category = "手势实时拖拽跟手",
         explanation = "手指在屏幕上拖拽时水滴持续追踪光标的物理阻尼比。",
-        increaseEffect = "调高（高于 0.80f）：水滴紧紧锁在光标正下方，甩手停下时几乎无多余晃动。",
-        decreaseEffect = "调低（低于 0.50f）：水滴呈现极强的水体流动弹性，急停或甩动手腕时光标停住而水滴冲出并回弹。",
-        recommendation = "建议 0.50f ~ 0.65f（默认 0.58f）。"
+        increaseEffect = "调高（高于 0.70f）：水滴紧紧锁在光标正下方，甩手停下时几乎无多余晃动。",
+        decreaseEffect = "调低（低于 0.45f）：水滴呈现极强的水体流动弹性，急停或甩动手腕时光标停住而水滴冲出并回弹。",
+        recommendation = "建议 0.40f ~ 0.55f（默认 0.45f）。"
     ),
     "dragStiffness" to TuningParamInfo(
         id = "dragStiffness",
@@ -178,9 +178,9 @@ private val physicsParamDocs = mapOf(
         label = "手势拖拽位移刚度",
         category = "手势实时拖拽跟手",
         explanation = "连续拖动时的弹簧拉力刚度，决定水滴在拖拽过程中的提速跟随曲线与延迟滞后感。",
-        increaseEffect = "调高（高于 500f）：水滴紧随手速，拉开的滞后距离很短，贴手感极强。",
-        decreaseEffect = "调低（低于 200f）：产生像橡皮筋拉动水珠般明显的流体滞后感，光标拉开一段距离水滴才加速跟上，反向时惯性显著。",
-        recommendation = "建议 200f ~ 350f（默认 260f）。"
+        increaseEffect = "调高（高于 450f）：水滴紧随手速，拉开的滞后距离很短，贴手感极强。",
+        decreaseEffect = "调低（低于 250f）：产生像橡皮筋拉动水珠般明显的流体滞后感，光标拉开一段距离水滴才加速跟上，反向时惯性显著。",
+        recommendation = "建议 280f ~ 400f（默认 340f）。"
     ),
     "maxOverhang" to TuningParamInfo(
         id = "maxOverhang",
@@ -188,9 +188,9 @@ private val physicsParamDocs = mapOf(
         label = "边界允许拉出极限 (像素)",
         category = "边界超界拉伸与底座形变",
         explanation = "水滴被指针拖拽拉出最左或最右槽位时，允许拉出托盘两端边缘的最大物理像素/Dp距离。",
-        increaseEffect = "调高（高于 50.dp）：允许拉出容器边缘很长距离，黏滞拉伸拉丝感极度夸张。",
-        decreaseEffect = "调低（低于 20.dp）：水滴受强硬物理边界拘束，几乎无法拉出两端胶囊外。",
-        recommendation = "建议 25.dp ~ 50.dp（默认 38.dp）。"
+        increaseEffect = "调高（高于 25.dp）：允许拉出容器边缘更长距离，黏滞拉伸拉丝感更夸张。",
+        decreaseEffect = "调低（低于 10.dp）：水滴受强硬物理边界拘束，几乎无法拉出两端胶囊外。",
+        recommendation = "建议 10.dp ~ 25.dp（默认 14.dp）。"
     ),
     "platterActiveScaleX" to TuningParamInfo(
         id = "platterActiveScaleX",
@@ -869,7 +869,7 @@ fun LiquidPhysicsTuningDialog(
                             value = currentPhysics.dockingDampingRatio,
                             valueRange = 0.40f..0.95f,
                             format = { "${((it * 100).roundToInt() / 100f)}f" },
-                            recommendation = "0.55f ~ 0.65f (默认 0.62f)",
+                            recommendation = "0.75f ~ 0.90f (默认 0.85f)",
                             isActive = activeParamId == "dockingDampingRatio",
                             onHover = { activeParamId = "dockingDampingRatio" },
                             onValueChange = {
@@ -884,7 +884,7 @@ fun LiquidPhysicsTuningDialog(
                             value = currentPhysics.dockingStiffness,
                             valueRange = 250f..1200f,
                             format = { "${it.roundToInt()}f" },
-                            recommendation = "500f ~ 700f (默认 600f)",
+                            recommendation = "450f ~ 650f (默认 550f)",
                             isActive = activeParamId == "dockingStiffness",
                             onHover = { activeParamId = "dockingStiffness" },
                             onValueChange = {
@@ -899,7 +899,7 @@ fun LiquidPhysicsTuningDialog(
                             value = currentPhysics.dockingInertiaFactor,
                             valueRange = 0.0f..2.0f,
                             format = { "${((it * 100).roundToInt() / 100f)}x (${(0.12f * it * 100).roundToInt()}% 槽宽)" },
-                            recommendation = "0.8f ~ 1.3f (默认 1.0f)",
+                            recommendation = "0.0f ~ 0.5f (默认 0.0f)",
                             isActive = activeParamId == "dockingInertiaFactor",
                             onHover = { activeParamId = "dockingInertiaFactor" },
                             onValueChange = {
@@ -934,7 +934,7 @@ fun LiquidPhysicsTuningDialog(
                             value = currentPhysics.shrinkDampingRatio,
                             valueRange = 0.40f..0.95f,
                             format = { "${((it * 100).roundToInt() / 100f)}f" },
-                            recommendation = "0.58f ~ 0.72f (默认 0.65f)",
+                            recommendation = "0.35f ~ 0.50f (默认 0.40f)",
                             isActive = activeParamId == "shrinkDampingRatio",
                             onHover = { activeParamId = "shrinkDampingRatio" },
                             onValueChange = {
@@ -949,7 +949,7 @@ fun LiquidPhysicsTuningDialog(
                             value = currentPhysics.shrinkStiffness,
                             valueRange = 150f..900f,
                             format = { "${it.roundToInt()}f" },
-                            recommendation = "320f ~ 500f (默认 420f)",
+                            recommendation = "150f ~ 300f (默认 180f)",
                             isActive = activeParamId == "shrinkStiffness",
                             onHover = { activeParamId = "shrinkStiffness" },
                             onValueChange = {
@@ -964,7 +964,7 @@ fun LiquidPhysicsTuningDialog(
                             value = currentPhysics.dropletElasticity,
                             valueRange = 0.0f..1.0f,
                             format = { "${((it * 100).roundToInt() / 100f)}x" },
-                            recommendation = "0.35x ~ 0.65x (默认 0.45x)",
+                            recommendation = "0.80x ~ 1.00x (默认 1.0x)",
                             isActive = activeParamId == "dropletElasticity",
                             onHover = { activeParamId = "dropletElasticity" },
                             onValueChange = {
@@ -979,7 +979,7 @@ fun LiquidPhysicsTuningDialog(
                             value = currentPhysics.growDampingRatio,
                             valueRange = 0.45f..0.95f,
                             format = { "${((it * 100).roundToInt() / 100f)}f" },
-                            recommendation = "0.62f ~ 0.72f (默认 0.68f)",
+                            recommendation = "0.40f ~ 0.55f (默认 0.45f)",
                             isActive = activeParamId == "growDampingRatio",
                             onHover = { activeParamId = "growDampingRatio" },
                             onValueChange = {
@@ -994,7 +994,7 @@ fun LiquidPhysicsTuningDialog(
                             value = currentPhysics.growStiffness,
                             valueRange = 500f..2200f,
                             format = { "${it.roundToInt()}f" },
-                            recommendation = "1100f ~ 1500f (默认 1350f)",
+                            recommendation = "1200f ~ 1600f (默认 1470f)",
                             isActive = activeParamId == "growStiffness",
                             onHover = { activeParamId = "growStiffness" },
                             onValueChange = {
@@ -1014,7 +1014,7 @@ fun LiquidPhysicsTuningDialog(
                             value = currentPhysics.dragDampingRatio,
                             valueRange = 0.35f..0.95f,
                             format = { "${((it * 100).roundToInt() / 100f)}f" },
-                            recommendation = "0.50f ~ 0.65f (默认 0.58f)",
+                            recommendation = "0.40f ~ 0.55f (默认 0.45f)",
                             isActive = activeParamId == "dragDampingRatio",
                             onHover = { activeParamId = "dragDampingRatio" },
                             onValueChange = {
@@ -1029,7 +1029,7 @@ fun LiquidPhysicsTuningDialog(
                             value = currentPhysics.dragStiffness,
                             valueRange = 80f..1000f,
                             format = { "${it.roundToInt()}f" },
-                            recommendation = "200f ~ 350f (默认 260f)",
+                            recommendation = "280f ~ 400f (默认 340f)",
                             isActive = activeParamId == "dragStiffness",
                             onHover = { activeParamId = "dragStiffness" },
                             onValueChange = {
@@ -1099,7 +1099,7 @@ fun LiquidPhysicsTuningDialog(
                             value = currentPhysics.maxOverhang.value,
                             valueRange = 0f..120f,
                             format = { "${it.roundToInt()} dp" },
-                            recommendation = "20.dp ~ 60.dp (默认 38.dp)",
+                            recommendation = "10.dp ~ 25.dp (默认 14.dp)",
                             isActive = activeParamId == "maxOverhang",
                             onHover = { activeParamId = "maxOverhang" },
                             onValueChange = {

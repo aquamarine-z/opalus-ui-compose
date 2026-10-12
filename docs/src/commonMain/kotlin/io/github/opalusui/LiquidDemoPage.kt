@@ -58,7 +58,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
 
     var physics by remember { mutableStateOf(LiquidTabBarDefaults.physics()) }
     var optics by remember {
-        mutableStateOf(LiquidTabBarDefaults.optics(isDark = isDarkTheme, chromaticAberration = true))
+        mutableStateOf(LiquidTabBarDefaults.optics(isDark = isDarkTheme))
     }
     var dimensions by remember { mutableStateOf(LiquidTabBarDefaults.dimensions()) }
     var showPhysicsDialog by remember { mutableStateOf(false) }
@@ -655,7 +655,7 @@ val customOptics = LiquidTabBarDefaults.optics(
     val indicatorShadowAlpha: Float = 0.45f,
     val indicatorInnerShadowRadius: Dp = 4.dp,
     val indicatorInnerShadowAlpha: Float = 0.28f,
-    val chromaticAberration: Boolean = false
+    val chromaticAberration: Boolean = true
 )""",
             description = "Configures SkSL hardware-accelerated shader properties. Controls background Gaussian blur, 3D convex lens meniscus curvature, specular rim light, and RGB chromatic aberration wavelength dispersion.",
             parameters = listOf(
@@ -668,7 +668,7 @@ val customOptics = LiquidTabBarDefaults.optics(
                 ParamItem("indicatorHighlightAlpha", "Float", "0.16f / 0.10f", "Specular edge highlight intensity on the droplet."),
                 ParamItem("indicatorShadowRadius / Offset", "Dp", "8.dp / 2.5.dp", "Drop shadow radius and Y offset casting underneath the droplet."),
                 ParamItem("indicatorInnerShadowRadius", "Dp", "4.dp", "Inner shadow radius creating 3D volume depth."),
-                ParamItem("chromaticAberration", "Boolean", "false", "Enables optical dispersion splitting RGB channels at lens edges.")
+                ParamItem("chromaticAberration", "Boolean", "true", "Enables optical dispersion splitting RGB channels at lens edges.")
             ),
             codeExample = """val highContrastOptics = LiquidTabBarDefaults.optics(
     chromaticAberration = true,
@@ -682,7 +682,7 @@ val customOptics = LiquidTabBarDefaults.optics(
             className = "LiquidTabBarPhysics",
             kind = "Kinematics Tokens (Immutable)",
             signature = """@Immutable data class LiquidTabBarPhysics(
-    val maxOverhang: Dp = 38.dp,
+    val maxOverhang: Dp = 14.dp,
     val overhangResistance: Float = 1.8f,
     val platterActiveScaleX: Float = 1.03f,
     val platterActiveScaleY: Float = 1.03f,
@@ -694,20 +694,20 @@ val customOptics = LiquidTabBarDefaults.optics(
     val maxVelocityCoerce: Float = 0.16f,
     val dragVisibilityThreshold: Float = 0.001f,
     val dragDampingRatio: Float = 0.45f,
-    val dragStiffness: Float = 190f,
-    val dockingDampingRatio: Float = 0.50f,
-    val dockingStiffness: Float = 480f,
-    val dockingInertiaFactor: Float = 1.25f,
-    val growDampingRatio: Float = 0.64f,
-    val growStiffness: Float = 2400f,
-    val shrinkDampingRatio: Float = 0.46f,
+    val dragStiffness: Float = 340f,
+    val dockingDampingRatio: Float = 0.85f,
+    val dockingStiffness: Float = 550f,
+    val dockingInertiaFactor: Float = 0.0f,
+    val growDampingRatio: Float = 0.45f,
+    val growStiffness: Float = 1470f,
+    val shrinkDampingRatio: Float = 0.40f,
     val shrinkStiffness: Float = 180f,
-    val dropletElasticity: Float = 0.85f,
+    val dropletElasticity: Float = 1.0f,
     val dockingShrinkThreshold: Float = 0.35f
 )""",
             description = "Defines the physical kinematics governing drag damping, spring stiffness, rubber-band resistance at container borders, grow/shrink speeds, docking inertia deviation, and droplet squash-and-stretch elasticity.",
             parameters = listOf(
-                ParamItem("maxOverhang", "Dp", "38.dp", "Maximum distance in Dp the droplet is allowed to be dragged past the navbar edge along the X axis."),
+                ParamItem("maxOverhang", "Dp", "14.dp", "Maximum distance in Dp the droplet is allowed to be dragged past the navbar edge along the X axis."),
                 ParamItem("overhangResistance", "Float", "1.8f", "Rubber-band exponent dampening pointer drag outside boundary slots."),
                 ParamItem("platterActiveScaleX", "Float", "1.03f", "Horizontal scale multiplier of the navbar platter body when active/pressed."),
                 ParamItem("platterActiveScaleY", "Float", "1.03f", "Vertical scale multiplier of the navbar platter body when active/pressed."),
@@ -717,19 +717,19 @@ val customOptics = LiquidTabBarDefaults.optics(
                 ParamItem("velocityHorizontalFactor", "Float", "0.65f", "Horizontal aspect-ratio elongation driven by drag velocity."),
                 ParamItem("velocityVerticalFactor", "Float", "0.20f", "Vertical aspect-ratio compression driven by drag velocity."),
                 ParamItem("maxVelocityCoerce", "Float", "0.16f", "Clamp limit preventing extreme distortion during fast flicks."),
-                ParamItem("dragDampingRatio / dragStiffness", "Float", "0.45f / 190f", "Spring physics for droplet transit motion during pointer drag."),
-                ParamItem("dockingDampingRatio / dockingStiffness", "Float", "0.50f / 480f", "Under-damped spring governing inertial entry overshoot (left entry leans right, right entry leans left)."),
-                ParamItem("dockingInertiaFactor", "Float", "1.25f", "Inertial impulse multiplier applied to fling velocity and docking displacement."),
-                ParamItem("growDampingRatio / growStiffness", "Float", "0.64f / 2400f", "High-speed snappy expansion dynamics with liquid surface tension bounce."),
-                ParamItem("shrinkDampingRatio / shrinkStiffness", "Float", "0.46f / 180f", "Soft, gradual easing dynamics when settling into a docked slot with elastic rebound."),
-                ParamItem("dropletElasticity", "Float", "0.85f", "Controls settling duration and harmonic jelly bounce dynamics when returning from active state to inactive rest."),
+                ParamItem("dragDampingRatio / dragStiffness", "Float", "0.45f / 340f", "Spring physics for droplet transit motion during pointer drag."),
+                ParamItem("dockingDampingRatio / dockingStiffness", "Float", "0.85f / 550f", "Under-damped spring governing gentle and swift settling into target slot."),
+                ParamItem("dockingInertiaFactor", "Float", "0.0f", "Inertial impulse multiplier applied to fling velocity and docking displacement."),
+                ParamItem("growDampingRatio / growStiffness", "Float", "0.45f / 1470f", "High-speed snappy expansion dynamics with liquid surface tension bounce."),
+                ParamItem("shrinkDampingRatio / shrinkStiffness", "Float", "0.40f / 180f", "Soft, gradual easing dynamics when settling into a docked slot with elastic rebound."),
+                ParamItem("dropletElasticity", "Float", "1.0f", "Controls settling duration and harmonic jelly bounce dynamics when returning from active state to inactive rest."),
                 ParamItem("dockingShrinkThreshold", "Float", "0.35f", "Distance threshold to target slot before the traveling droplet begins shrinking.")
             ),
             codeExample = """val fluidPhysics = LiquidTabBarDefaults.physics(
-    dockingDampingRatio = 0.50f,
-    dockingInertiaFactor = 1.25f,
-    dropletElasticity = 0.85f,
-    shrinkDampingRatio = 0.46f
+    dockingDampingRatio = 0.85f,
+    dockingStiffness = 550f,
+    dropletElasticity = 1.0f,
+    shrinkDampingRatio = 0.40f
 )"""
         )
 

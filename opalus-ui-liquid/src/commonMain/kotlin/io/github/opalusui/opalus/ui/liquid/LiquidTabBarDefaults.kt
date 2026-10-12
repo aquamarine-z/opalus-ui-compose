@@ -58,7 +58,7 @@ data class LiquidTabBarOptics(
     val indicatorShadowAlpha: Float = 0.45f,
     val indicatorInnerShadowRadius: Dp = 4.dp,
     val indicatorInnerShadowAlpha: Float = 0.28f,
-    val chromaticAberration: Boolean = false
+    val chromaticAberration: Boolean = true
 )
 
 /**
@@ -66,7 +66,7 @@ data class LiquidTabBarOptics(
  */
 @Immutable
 data class LiquidTabBarPhysics(
-    val maxOverhang: Dp = 38.dp,
+    val maxOverhang: Dp = 14.dp,
     val overhangResistance: Float = 1.8f,
     val platterActiveScaleX: Float = 1.03f,
     val platterActiveScaleY: Float = 1.03f,
@@ -78,25 +78,25 @@ data class LiquidTabBarPhysics(
     val maxVelocityCoerce: Float = 0.16f,
     val dragVisibilityThreshold: Float = 0.001f,
 
-    // 水滴位移物理参数：拖拽流动阻尼与跟手刚度 (0.45f 欠阻尼带来拉动流动滞后与更强烈的追赶摇晃弹性；190f 刚度呈现像橡皮筋拉动水珠般的液滴拖拽阻尼感)
+    // 水滴位移物理参数：拖拽流动阻尼与跟手刚度 (0.45f 欠阻尼带来拉动流动滞后与更强烈的追赶摇晃弹性；340f 刚度呈现跟手灵敏的流体拖拽感)
     val dragDampingRatio: Float = 0.45f,
-    val dragStiffness: Float = 190f,
+    val dragStiffness: Float = 340f,
 
-    // 槽位吸附惯性参数：0.50f 欠阻尼赋予进入 item 时自然的惯性冲量与摇晃回弹
-    val dockingDampingRatio: Float = 0.50f,
-    val dockingStiffness: Float = 480f,
-    val dockingInertiaFactor: Float = 1.25f,
+    // 槽位吸附惯性参数：0.85f 阻尼比赋予进入 item 时轻柔停靠；0.0f 定值偏转无多余过冲
+    val dockingDampingRatio: Float = 0.85f,
+    val dockingStiffness: Float = 550f,
+    val dockingInertiaFactor: Float = 0.0f,
 
-    // 水滴按下变大速度与弹性：2400f 刚度瞬时爆发成型张开，0.64f 阻尼比呈现水珠饱满微弹
-    val growDampingRatio: Float = 0.64f,
-    val growStiffness: Float = 2400f,
+    // 水滴按下变大速度与弹性：1470f 刚度瞬时爆发成型张开，0.45f 阻尼比呈现水珠饱满微弹
+    val growDampingRatio: Float = 0.45f,
+    val growStiffness: Float = 1470f,
 
-    // 水滴吸附变小速度与弹性：180f 刚度悠闲柔润收缩，0.46f 阻尼比带来充分的果冻回弹缩小质感
-    val shrinkDampingRatio: Float = 0.46f,
+    // 水滴吸附变小速度与弹性：180f 刚度悠闲柔润收缩，0.40f 阻尼比带来充分的果冻回弹缩小质感
+    val shrinkDampingRatio: Float = 0.40f,
     val shrinkStiffness: Float = 180f,
 
     // 水滴果冻回弹弹性程度：控制水珠松开后从当前尺寸收拢回到 inactive 静态所需的时间与过程中的物理弹性
-    val dropletElasticity: Float = 0.85f,
+    val dropletElasticity: Float = 1.0f,
 
     // 吸附 item 时开始变小的距离阈值 (以 Tab 槽位跨度归一化单位计)
     val dockingShrinkThreshold: Float = 0.35f
@@ -173,7 +173,7 @@ object LiquidTabBarDefaults {
         indicatorShadowAlpha: Float = if (!isDark) 0.45f else 0.55f,
         indicatorInnerShadowRadius: Dp = 4.dp,
         indicatorInnerShadowAlpha: Float = 0.28f,
-        chromaticAberration: Boolean = false
+        chromaticAberration: Boolean = true
     ): LiquidTabBarOptics = LiquidTabBarOptics(
         platterBlur = platterBlur,
         platterRefractionHeight = platterRefractionHeight,
@@ -195,7 +195,7 @@ object LiquidTabBarDefaults {
      * 动力学物理与手势默认工厂
      */
     fun physics(
-        maxOverhang: Dp = 38.dp,
+        maxOverhang: Dp = 14.dp,
         overhangResistance: Float = 1.8f,
         platterActiveScaleX: Float = 1.03f,
         platterActiveScaleY: Float = 1.03f,
@@ -207,15 +207,15 @@ object LiquidTabBarDefaults {
         maxVelocityCoerce: Float = 0.16f,
         dragVisibilityThreshold: Float = 0.001f,
         dragDampingRatio: Float = 0.45f,
-        dragStiffness: Float = 190f,
-        dockingDampingRatio: Float = 0.50f,
-        dockingStiffness: Float = 480f,
-        dockingInertiaFactor: Float = 1.25f,
-        growDampingRatio: Float = 0.64f,
-        growStiffness: Float = 2400f,
-        shrinkDampingRatio: Float = 0.46f,
+        dragStiffness: Float = 340f,
+        dockingDampingRatio: Float = 0.85f,
+        dockingStiffness: Float = 550f,
+        dockingInertiaFactor: Float = 0.0f,
+        growDampingRatio: Float = 0.45f,
+        growStiffness: Float = 1470f,
+        shrinkDampingRatio: Float = 0.40f,
         shrinkStiffness: Float = 180f,
-        dropletElasticity: Float = 0.85f,
+        dropletElasticity: Float = 1.0f,
         dockingShrinkThreshold: Float = 0.35f
     ): LiquidTabBarPhysics = LiquidTabBarPhysics(
         maxOverhang = maxOverhang,
