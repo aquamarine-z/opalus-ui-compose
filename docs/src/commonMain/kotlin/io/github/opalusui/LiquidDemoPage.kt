@@ -43,9 +43,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import io.github.opalusui.opalus.ui.liquid.LiquidBoundaryEdge
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBar
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBarDefaults
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBarDimensions
+import io.github.opalusui.opalus.ui.liquid.LiquidTabBarEvents
 import io.github.opalusui.opalus.ui.liquid.LiquidTabItem
 
 @Composable
@@ -55,6 +57,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
 
     var selectedTab2 by remember { mutableStateOf(0) }
     val tabs2 = remember { listOf("Dashboard", "Analytics", "Settings") }
+    var eventLog by remember { mutableStateOf("Ready (Idle)") }
 
     var physics by remember { mutableStateOf(LiquidTabBarDefaults.physics()) }
     var optics by remember {
@@ -382,6 +385,37 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                             optics = optics,
                             physics = physics,
                             dimensions = dimensions,
+                            events = remember {
+                                LiquidTabBarEvents(
+                                    onDropletActivated = { index ->
+                                        eventLog = "onDropletActivated(index = $index)"
+                                    },
+                                    onDropletDeactivated = { finalIndex ->
+                                        eventLog = "onDropletDeactivated(finalIndex = $finalIndex)"
+                                    },
+                                    onTabCrossed = { from, to ->
+                                        eventLog = "onTabCrossed(from = $from, to = $to)"
+                                    },
+                                    onSlotHovered = { slot ->
+                                        eventLog = "onSlotHovered(slot = $slot)"
+                                    },
+                                    onBoundaryReached = { edge ->
+                                        eventLog = "onBoundaryReached(edge = $edge)"
+                                    },
+                                    onMaxOverhangReached = { edge ->
+                                        eventLog = "onMaxOverhangReached(edge = $edge)"
+                                    },
+                                    onBoundaryPull = { edge, ratio ->
+                                        eventLog = "onBoundaryPull(edge = $edge, ratio = ${((ratio * 100).toInt())}%)"
+                                    },
+                                    onDockingStarted = { target ->
+                                        eventLog = "onDockingStarted(target = $target)"
+                                    },
+                                    onDockingSettled = { settled ->
+                                        eventLog = "onDockingSettled(settled = $settled)"
+                                    }
+                                )
+                            },
                             modifier = Modifier.widthIn(max = 380.dp),
                             inactiveItem = { _, item ->
                                 LiquidTabItem(
@@ -411,12 +445,24 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = "Active Tab: Index $selectedTab2 (${tabs2[selectedTab2]})",
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Active Tab: Index $selectedTab2 (${tabs2[selectedTab2]})",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Live Event: $eventLog",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
@@ -441,7 +487,8 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
     dimensions: LiquidTabBarDimensions = LiquidTabBarDefaults.dimensions(),
     optics: LiquidTabBarOptics = LiquidTabBarDefaults.optics(),
     physics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics(),
-    state: LiquidTabBarState = rememberLiquidTabBarState(selectedTabIndex, items.size, physics),
+    events: LiquidTabBarEvents = LiquidTabBarDefaults.events(),
+    state: LiquidTabBarState = rememberLiquidTabBarState(selectedTabIndex, items.size, physics, events),
     inactiveItem: @Composable (index: Int, item: T) -> Unit,
     activeItem: @Composable (index: Int, item: T) -> Unit = inactiveItem
 )""",
@@ -456,6 +503,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                 ParamItem("dimensions", "LiquidTabBarDimensions", "Defaults.dimensions()", "Spatial geometry tokens defining container height (84dp), platter height (58dp), and margins."),
                 ParamItem("optics", "LiquidTabBarOptics", "Defaults.optics()", "Refraction height, micro-matte blur, specular highlight, shadows, and chromatic aberration."),
                 ParamItem("physics", "LiquidTabBarPhysics", "Defaults.physics()", "Kinematics constants: spring stiffness, damping, overhang resistance, and velocity factor."),
+                ParamItem("events", "LiquidTabBarEvents", "Defaults.events()", "Lifecycle event listeners for pointer activation, tab crossing, boundary pulling, and docking settlement."),
                 ParamItem("state", "LiquidTabBarState", "rememberState()", "State machine tracking touch pointer position, velocity, and animated droplet translation."),
                 ParamItem("inactiveItem", "@Composable (Int, T)", "Required", "Slot Composable for unselected tabs; rendered inside platter with anti-ghosting difference cutout."),
                 ParamItem("activeItem", "@Composable (Int, T)", "inactiveItem", "Slot Composable for selected tabs; rendered onto offscreen transparent layer and magnified by lens.")
@@ -733,14 +781,52 @@ val customOptics = LiquidTabBarDefaults.optics(
 )"""
         )
 
-        // 8. LiquidTabBarState
+        // 8. LiquidTabBarEvents & LiquidBoundaryEdge
+        M3ClassDocCard(
+            className = "LiquidTabBarEvents & LiquidBoundaryEdge",
+            kind = "Lifecycle Event Callbacks (Immutable)",
+            signature = """enum class LiquidBoundaryEdge { Start, End }
+
+@Immutable data class LiquidTabBarEvents(
+    val onDropletActivated: ((index: Int) -> Unit)? = null,
+    val onDropletDeactivated: ((finalIndex: Int) -> Unit)? = null,
+    val onTabCrossed: ((fromIndex: Int, toIndex: Int) -> Unit)? = null,
+    val onSlotHovered: ((slotIndex: Int) -> Unit)? = null,
+    val onBoundaryReached: ((edge: LiquidBoundaryEdge) -> Unit)? = null,
+    val onMaxOverhangReached: ((edge: LiquidBoundaryEdge) -> Unit)? = null,
+    val onBoundaryPull: ((edge: LiquidBoundaryEdge, pullRatio: Float) -> Unit)? = null,
+    val onDockingStarted: ((targetIndex: Int) -> Unit)? = null,
+    val onDockingSettled: ((settledIndex: Int) -> Unit)? = null
+)""",
+            description = "Provides pure lifecycle hooks across the entire fluid kinematics pipeline: from pointer press expansion, crossing adjacent tab midlines, stretching past container bounds, to spring docking settlement. All callbacks default to null so callers only listen to what they need with zero bundled animations, haptic, or sound side-effects.",
+            parameters = listOf(
+                ParamItem("onDropletActivated", "((Int) -> Unit)?", "null", "Triggered the instant pointer presses down and the fluid droplet expands into its active state."),
+                ParamItem("onDropletDeactivated", "((Int) -> Unit)?", "null", "Triggered when pointer lifts up, releasing the droplet from drag mode."),
+                ParamItem("onTabCrossed", "((Int, Int) -> Unit)?", "null", "Fires when droplet center crosses the midline between two tab slots (fromIndex -> toIndex). Ideal for haptic ticks."),
+                ParamItem("onSlotHovered", "((Int) -> Unit)?", "null", "Triggered when the candidate drop slot changes during active dragging."),
+                ParamItem("onBoundaryReached", "((LiquidBoundaryEdge) -> Unit)?", "null", "Fires once upon pulling the droplet past the Start or End container edge into elastic overhang zone."),
+                ParamItem("onMaxOverhangReached", "((LiquidBoundaryEdge) -> Unit)?", "null", "Fires once when droplet displacement reaches near-maximum overhang limit (pullRatio >= 0.95f)."),
+                ParamItem("onBoundaryPull", "((LiquidBoundaryEdge, Float) -> Unit)?", "null", "Continuous stream of normalized pull ratio (0.0f..1.0f) while stretching beyond container borders."),
+                ParamItem("onDockingStarted", "((Int) -> Unit)?", "null", "Fires when release occurs and the fluid spring docking animation begins toward the target slot."),
+                ParamItem("onDockingSettled", "((Int) -> Unit)?", "null", "Fires when docking impulse, under-damped rebound, and jelly bounce completely settle to rest.")
+            ),
+            codeExample = """val events = LiquidTabBarEvents(
+    onDropletActivated = { index -> println("Droplet active at: ${'$'}index") },
+    onTabCrossed = { from, to -> hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove) },
+    onBoundaryReached = { edge -> println("Hit boundary: ${'$'}edge") },
+    onDockingSettled = { settledIndex -> println("Settled at tab: ${'$'}settledIndex") }
+)"""
+        )
+
+        // 9. LiquidTabBarState
         M3ClassDocCard(
             className = "LiquidTabBarState & rememberLiquidTabBarState",
             kind = "Motion State Machine",
             signature = """@Composable fun rememberLiquidTabBarState(
     selectedTabIndex: () -> Int,
     tabsCount: Int,
-    physics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics()
+    physics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics(),
+    events: LiquidTabBarEvents = LiquidTabBarDefaults.events()
 ): LiquidTabBarState
 
 class LiquidTabBarState {
@@ -757,6 +843,7 @@ class LiquidTabBarState {
                 ParamItem("selectedTabIndex", "() -> Int", "Required", "Lambda provider supplying current selected tab index."),
                 ParamItem("tabsCount", "Int", "Required", "Total number of tabs displayed in the dock."),
                 ParamItem("physics", "LiquidTabBarPhysics", "Defaults", "Physics configuration used for velocity coercion and damping."),
+                ParamItem("events", "LiquidTabBarEvents", "Defaults.events()", "Lifecycle events configuration synced dynamically across recompositions."),
                 ParamItem("animatedValue", "Float (Get)", "Observable", "Continuous float representing droplet center position (0.0 to N-1)."),
                 ParamItem("pressProgress", "Float (Get)", "0f..1f", "Animated progress from resting (0f) to active dragging (1f)."),
                 ParamItem("velocity", "Float (Get)", "Points/sec", "Instantaneous horizontal pointer velocity used for lens squash-and-stretch."),
@@ -773,7 +860,7 @@ LaunchedEffect(deepLinkTab) {
 }"""
         )
 
-        // 9. Triple-Backdrop Sampling Architecture
+        // 10. Triple-Backdrop Sampling Architecture
         M3ClassDocCard(
             className = "Triple-Backdrop & Anti-Ghosting Architecture",
             kind = "Internal Rendering Engine",

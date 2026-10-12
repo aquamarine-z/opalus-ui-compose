@@ -241,4 +241,9 @@ object LiquidTabBarDefaults {
         dropletElasticity = dropletElasticity,
         dockingShrinkThreshold = dockingShrinkThreshold
     )
+
+    /**
+     * 流体导航栏默认事件监听器配置 (默认为全空纯净钩子)
+     */
+    fun events(): LiquidTabBarEvents = LiquidTabBarEvents()
 }

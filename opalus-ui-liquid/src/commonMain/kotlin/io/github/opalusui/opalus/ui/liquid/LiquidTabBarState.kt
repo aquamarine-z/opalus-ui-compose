@@ -14,12 +14,20 @@ class LiquidTabBarState(
     val animationScope: CoroutineScope,
     initialIndex: Int,
     val tabsCount: Int,
-    initialPhysics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics()
+    initialPhysics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics(),
+    initialEvents: LiquidTabBarEvents = LiquidTabBarDefaults.events()
 ) {
     var currentIndex by mutableIntStateOf(initialIndex)
         private set
 
     var physics by mutableStateOf(initialPhysics)
+    var events by mutableStateOf(initialEvents)
+
+    private var lastHoveredSlot: Int = initialIndex
+    private var startBoundaryHit: Boolean = false
+    private var endBoundaryHit: Boolean = false
+    private var startMaxOverhangHit: Boolean = false
+    private var endMaxOverhangHit: Boolean = false
 
     val dampedAnimation = DampedDragAnimation(
         animationScope = animationScope,
@@ -33,13 +41,22 @@ class LiquidTabBarState(
         initialPhysics = initialPhysics,
         onDragStarted = {},
         onDragStopped = {},
-        onDrag = { _, _ -> }
+        onDrag = { _, _ -> },
+        onAnimationSettled = { settledIndex ->
+            events.onDockingSettled?.invoke(settledIndex)
+        }
     )
 
     fun updatePhysics(newPhysics: LiquidTabBarPhysics) {
         if (physics != newPhysics) {
             physics = newPhysics
             dampedAnimation.physics = newPhysics
+        }
+    }
+
+    fun updateEvents(newEvents: LiquidTabBarEvents) {
+        if (events != newEvents) {
+            events = newEvents
         }
     }
 
@@ -65,6 +82,23 @@ class LiquidTabBarState(
         get() = dampedAnimation.targetValue
 
     /**
+     * 计算光标在 Tab 坐标系下的原始非约束相对位置
+     */
+    fun computeRawTarget(
+        x: Float,
+        totalWidth: Float,
+        tabWidth: Float,
+        padHorizontalPx: Float,
+        isLtr: Boolean
+    ): Float {
+        return if (isLtr) {
+            (x - padHorizontalPx) / tabWidth - 0.5f
+        } else {
+            (totalWidth - padHorizontalPx - x) / tabWidth - 0.5f
+        }
+    }
+
+    /**
      * 将光标屏幕横坐标转换为带物理阻尼的水滴目标插值位置
      */
     fun computeTargetFromPointer(
@@ -76,12 +110,7 @@ class LiquidTabBarState(
         maxOverhangPx: Float = tabWidth * 0.38f
     ): Float {
         val maxTab = (tabsCount - 1).toFloat()
-        val rawTarget = if (isLtr) {
-            (x - padHorizontalPx) / tabWidth - 0.5f
-        } else {
-            (totalWidth - padHorizontalPx - x) / tabWidth - 0.5f
-        }
-
+        val rawTarget = computeRawTarget(x, totalWidth, tabWidth, padHorizontalPx, isLtr)
         val maxOverhangSlots = (maxOverhangPx / tabWidth).coerceAtLeast(0.001f)
         return when {
             rawTarget < 0f -> {
@@ -124,6 +153,15 @@ class LiquidTabBarState(
         dampedAnimation.press()
         val target = computeTargetFromPointer(x, totalWidth, tabWidth, padHorizontalPx, isLtr, maxOverhangPx)
         dampedAnimation.updateValue(target)
+
+        val initialSlot = computeSlotFromPointer(x, totalWidth, tabWidth, padHorizontalPx, isLtr)
+        lastHoveredSlot = initialSlot
+        startBoundaryHit = false
+        endBoundaryHit = false
+        startMaxOverhangHit = false
+        endMaxOverhangHit = false
+
+        events.onDropletActivated?.invoke(initialSlot)
     }
 
     /**
@@ -139,6 +177,54 @@ class LiquidTabBarState(
     ) {
         val target = computeTargetFromPointer(x, totalWidth, tabWidth, padHorizontalPx, isLtr, maxOverhangPx)
         dampedAnimation.updateValue(target)
+
+        val currentSlot = computeSlotFromPointer(x, totalWidth, tabWidth, padHorizontalPx, isLtr)
+        if (currentSlot != lastHoveredSlot) {
+            val prevSlot = lastHoveredSlot
+            lastHoveredSlot = currentSlot
+            events.onTabCrossed?.invoke(prevSlot, currentSlot)
+            events.onSlotHovered?.invoke(currentSlot)
+        }
+
+        val maxTab = (tabsCount - 1).toFloat()
+        val rawTarget = computeRawTarget(x, totalWidth, tabWidth, padHorizontalPx, isLtr)
+        val maxOverhangSlots = (maxOverhangPx / tabWidth).coerceAtLeast(0.001f)
+
+        if (rawTarget < 0f) {
+            val edge = LiquidBoundaryEdge.Start
+            if (!startBoundaryHit) {
+                startBoundaryHit = true
+                events.onBoundaryReached?.invoke(edge)
+            }
+            val excess = -rawTarget
+            val pullRatio = tanh(excess / (maxOverhangSlots * physics.overhangResistance)).coerceIn(0f, 1f)
+            events.onBoundaryPull?.invoke(edge, pullRatio)
+            if (pullRatio >= 0.95f && !startMaxOverhangHit) {
+                startMaxOverhangHit = true
+                events.onMaxOverhangReached?.invoke(edge)
+            }
+        } else {
+            startBoundaryHit = false
+            startMaxOverhangHit = false
+        }
+
+        if (rawTarget > maxTab) {
+            val edge = LiquidBoundaryEdge.End
+            if (!endBoundaryHit) {
+                endBoundaryHit = true
+                events.onBoundaryReached?.invoke(edge)
+            }
+            val excess = rawTarget - maxTab
+            val pullRatio = tanh(excess / (maxOverhangSlots * physics.overhangResistance)).coerceIn(0f, 1f)
+            events.onBoundaryPull?.invoke(edge, pullRatio)
+            if (pullRatio >= 0.95f && !endMaxOverhangHit) {
+                endMaxOverhangHit = true
+                events.onMaxOverhangReached?.invoke(edge)
+            }
+        } else {
+            endBoundaryHit = false
+            endMaxOverhangHit = false
+        }
     }
 
     /**
@@ -154,6 +240,14 @@ class LiquidTabBarState(
     ) {
         val finalIndex = computeSlotFromPointer(lastX, totalWidth, tabWidth, padHorizontalPx, isLtr)
         currentIndex = finalIndex
+        startBoundaryHit = false
+        endBoundaryHit = false
+        startMaxOverhangHit = false
+        endMaxOverhangHit = false
+
+        events.onDropletDeactivated?.invoke(finalIndex)
+        events.onDockingStarted?.invoke(finalIndex)
+
         dampedAnimation.animateToValue(finalIndex.toFloat())
         onTabSelected(finalIndex)
     }
@@ -164,6 +258,7 @@ class LiquidTabBarState(
     fun animateToTab(index: Int) {
         val target = index.coerceIn(0, tabsCount - 1)
         currentIndex = target
+        events.onDockingStarted?.invoke(target)
         dampedAnimation.animateToValue(target.toFloat())
     }
 }
@@ -175,7 +270,8 @@ class LiquidTabBarState(
 fun rememberLiquidTabBarState(
     selectedTabIndex: () -> Int,
     tabsCount: Int,
-    physics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics()
+    physics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics(),
+    events: LiquidTabBarEvents = LiquidTabBarDefaults.events()
 ): LiquidTabBarState {
     val animationScope = rememberCoroutineScope()
     val initial = remember { selectedTabIndex().coerceIn(0, (tabsCount - 1).coerceAtLeast(0)) }
@@ -184,13 +280,15 @@ fun rememberLiquidTabBarState(
             animationScope = animationScope,
             initialIndex = initial,
             tabsCount = tabsCount,
-            initialPhysics = physics
+            initialPhysics = physics,
+            initialEvents = events
         )
     }
 
-    // 动态同步物理参数，避免状态机被销毁重建
+    // 动态同步物理参数与生命周期事件，避免状态机被销毁重建
     SideEffect {
         state.updatePhysics(physics)
+        state.updateEvents(events)
     }
 
     LaunchedEffect(state, selectedTabIndex) {

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -33,11 +34,17 @@ fun <T> LiquidTabBar(
     dimensions: LiquidTabBarDimensions = LiquidTabBarDefaults.dimensions(),
     optics: LiquidTabBarOptics = LiquidTabBarDefaults.optics(),
     physics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics(),
-    state: LiquidTabBarState = rememberLiquidTabBarState(selectedTabIndex, items.size, physics),
+    events: LiquidTabBarEvents = LiquidTabBarDefaults.events(),
+    state: LiquidTabBarState = rememberLiquidTabBarState(selectedTabIndex, items.size, physics, events),
     inactiveItem: @Composable (index: Int, item: T) -> Unit,
     activeItem: @Composable (index: Int, item: T) -> Unit = inactiveItem
 ) {
     if (items.isEmpty()) return
+
+    SideEffect {
+        state.updatePhysics(physics)
+        state.updateEvents(events)
+    }
 
     val dockBackdrop = rememberLayerBackdrop()
     val activeButtonsBackdrop = rememberLayerBackdrop()
@@ -169,7 +176,8 @@ fun LiquidTabBar(
     dimensions: LiquidTabBarDimensions = LiquidTabBarDefaults.dimensions(),
     optics: LiquidTabBarOptics = LiquidTabBarDefaults.optics(),
     physics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics(),
-    state: LiquidTabBarState = rememberLiquidTabBarState(selectedTabIndex, items.size, physics)
+    events: LiquidTabBarEvents = LiquidTabBarDefaults.events(),
+    state: LiquidTabBarState = rememberLiquidTabBarState(selectedTabIndex, items.size, physics, events)
 ) {
     LiquidTabBar(
         items = items,
@@ -181,6 +189,7 @@ fun LiquidTabBar(
         dimensions = dimensions,
         optics = optics,
         physics = physics,
+        events = events,
         state = state,
         inactiveItem = { _, item -> item.inactive() },
         activeItem = { _, item -> item.active() }

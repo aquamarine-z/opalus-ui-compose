@@ -23,6 +23,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.time.TimeSource
 
 class DampedDragAnimation(
@@ -38,6 +39,7 @@ class DampedDragAnimation(
     val onDragStarted: DampedDragAnimation.(position: Offset) -> Unit = {},
     val onDragStopped: DampedDragAnimation.() -> Unit = {},
     val onDrag: DampedDragAnimation.(size: IntSize, dragAmount: Offset) -> Unit = { _, _ -> },
+    val onAnimationSettled: (Int) -> Unit = {}
 ) {
     var physics: LiquidTabBarPhysics by mutableStateOf(initialPhysics)
 
@@ -297,6 +299,7 @@ class DampedDragAnimation(
                     velocityAnimation.snapTo(0f)
                     jellyAnimation.snapTo(0f)
                     currentSimVelocity = 0f
+                    onAnimationSettled(target.roundToInt())
                 }
             }
         }
