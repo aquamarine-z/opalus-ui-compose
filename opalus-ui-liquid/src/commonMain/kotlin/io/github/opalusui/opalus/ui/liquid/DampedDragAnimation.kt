@@ -135,10 +135,18 @@ class DampedDragAnimation(
         animateToValue(valueAnimation.targetValue)
     }
 
+    private var dragJob: Job? = null
+
     fun updateValue(value: Float) {
         val targetValue = value.coerceIn(valueRange)
-        animationScope.launch {
-            valueAnimation.animateTo(targetValue, dragAnimationSpec) {
+        dragJob?.cancel()
+        dragJob = animationScope.launch {
+            val currentVel = valueAnimation.velocity
+            valueAnimation.animateTo(
+                targetValue = targetValue,
+                animationSpec = dragAnimationSpec,
+                initialVelocity = currentVel
+            ) {
                 updateVelocity()
             }
         }
@@ -146,6 +154,7 @@ class DampedDragAnimation(
 
     fun animateToValue(value: Float) {
         val target = value.coerceIn(valueRange)
+        dragJob?.cancel()
         pressJob?.cancel()
         snapJob?.cancel()
         val token = ++animationToken

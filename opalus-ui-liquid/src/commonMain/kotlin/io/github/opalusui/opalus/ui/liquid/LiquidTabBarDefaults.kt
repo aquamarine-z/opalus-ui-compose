@@ -73,9 +73,9 @@ data class LiquidTabBarPhysics(
     val maxVelocityCoerce: Float = 0.2f,
     val dragVisibilityThreshold: Float = 0.001f,
 
-    // 水滴位移物理参数：拖拽跟手
-    val dragDampingRatio: Float = 0.85f,
-    val dragStiffness: Float = 950f,
+    // 水滴位移物理参数：拖拽流动阻尼与跟手刚度 (0.58f 欠阻尼带来拉动流动滞后与追赶弹性；260f 刚度呈现真实水珠质感)
+    val dragDampingRatio: Float = 0.58f,
+    val dragStiffness: Float = 260f,
 
     // 槽位吸附惯性参数：0.62f 欠阻尼赋予进入 item 时自然的惯性冲量（左入偏右、右入偏左）
     val dockingDampingRatio: Float = 0.62f,
@@ -195,8 +195,8 @@ object LiquidTabBarDefaults {
         velocityVerticalFactor: Float = 0.25f,
         maxVelocityCoerce: Float = 0.2f,
         dragVisibilityThreshold: Float = 0.001f,
-        dragDampingRatio: Float = 0.85f,
-        dragStiffness: Float = 950f,
+        dragDampingRatio: Float = 0.58f,
+        dragStiffness: Float = 260f,
         dockingDampingRatio: Float = 0.62f,
         dockingStiffness: Float = 600f,
         dockingInertiaFactor: Float = 1.0f,

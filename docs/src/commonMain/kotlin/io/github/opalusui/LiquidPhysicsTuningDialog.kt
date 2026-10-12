@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -45,8 +46,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBar
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBarDefaults
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBarPhysics
@@ -150,18 +149,18 @@ private val physicsParamDocs = mapOf(
         name = "dragDampingRatio",
         label = "手势拖拽位移阻尼比",
         category = "手势实时拖拽跟手",
-        explanation = "手指在屏幕上连续拖拽时，水滴跟随光标的物理阻尼。",
-        visualEffect = "微欠阻尼赋予水滴位移轻微的水体流动感与动态惯性。",
-        recommendation = "推荐 0.80f ~ 0.88f。"
+        explanation = "手指拖拽时水滴跟随的物理阻尼。阻尼比越低，手指甩动或急停时水滴越有弹性质感与追赶回弹。",
+        visualEffect = "低于 0.70f 时带来灵动的水滴表面张力回弹；接近 1.0f 时几乎无弹跳。",
+        recommendation = "默认 0.58f；推荐 0.50f ~ 0.65f，呈现真正液体拖动回弹。"
     ),
     "dragStiffness" to PhysicsParamInfo(
         id = "dragStiffness",
         name = "dragStiffness",
         label = "手势拖拽位移刚度",
         category = "手势实时拖拽跟手",
-        explanation = "手指拖拽时的位移弹簧刚度。",
-        visualEffect = "控制水滴跟随手指的贴合灵敏度。数值越高越跟手，数值越低滞后感越强。",
-        recommendation = "推荐 900f ~ 1100f。"
+        explanation = "控制拉动水滴时的弹簧拉力刚度。刚度越低拉动时水滴稍微慢一点跟上手指，拉开明显弹性滞后；刚度越高越贴手。",
+        visualEffect = "较低刚度（80f ~ 300f）产生水滴被橡皮筋拉动般明显的延迟追赶与拉伸变形；较高刚度紧密贴合光标。",
+        recommendation = "默认 260f；喜欢明显流体滞后感可设为 120f ~ 260f。"
     )
 )
 
@@ -178,16 +177,28 @@ fun LiquidPhysicsTuningDialog(
 
     val activeInfo = physicsParamDocs[activeParamId] ?: physicsParamDocs["dockingDampingRatio"]!!
 
-    Dialog(
-        onDismissRequest = onDismissRequest,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.65f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onDismissRequest
+            ),
+        contentAlignment = Alignment.Center
     ) {
         Card(
             modifier = Modifier
                 .widthIn(max = 840.dp)
                 .fillMaxWidth(0.96f)
                 .heightIn(max = 720.dp)
-                .clip(RoundedCornerShape(24.dp)),
+                .clip(RoundedCornerShape(24.dp))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {}
+                ),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
@@ -531,7 +542,7 @@ fun LiquidPhysicsTuningDialog(
                         name = "dragDampingRatio",
                         label = "拖拽位移阻尼比 (手指拖动时的水体惯性)",
                         value = currentPhysics.dragDampingRatio,
-                        valueRange = 0.60f..1.0f,
+                        valueRange = 0.35f..0.95f,
                         format = { "${((it * 100).roundToInt() / 100f)}f" },
                         isActive = activeParamId == "dragDampingRatio",
                         onHover = { activeParamId = "dragDampingRatio" },
@@ -545,7 +556,7 @@ fun LiquidPhysicsTuningDialog(
                         name = "dragStiffness",
                         label = "拖拽位移刚度 (手势贴合灵敏度)",
                         value = currentPhysics.dragStiffness,
-                        valueRange = 400f..1600f,
+                        valueRange = 80f..1000f,
                         format = { "${it.roundToInt()}f" },
                         isActive = activeParamId == "dragStiffness",
                         onHover = { activeParamId = "dragStiffness" },
