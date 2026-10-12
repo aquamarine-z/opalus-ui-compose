@@ -60,6 +60,10 @@ fun <T> LiquidTabBar(
             (constraints.maxWidth.toFloat() - padHorizontalPx * 2f) / items.size
         }
 
+        SideEffect {
+            state.updateOverhangBounds(tabWidth, maxOverhangPx)
+        }
+
         val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
 
         // 统一手势处理与图层容器

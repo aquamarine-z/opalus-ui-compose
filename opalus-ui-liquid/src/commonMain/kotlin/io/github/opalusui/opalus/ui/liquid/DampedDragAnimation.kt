@@ -29,7 +29,7 @@ import kotlin.time.TimeSource
 class DampedDragAnimation(
     private val animationScope: CoroutineScope,
     val initialValue: Float,
-    val valueRange: ClosedRange<Float>,
+    initialValueRange: ClosedRange<Float>,
     val visibilityThreshold: Float,
     val initialScale: Float,
     val pressedScale: Float = 1.03f,
@@ -41,6 +41,7 @@ class DampedDragAnimation(
     val onDrag: DampedDragAnimation.(size: IntSize, dragAmount: Offset) -> Unit = { _, _ -> },
     val onAnimationSettled: (Int) -> Unit = {}
 ) {
+    var valueRange: ClosedRange<Float> by mutableStateOf(initialValueRange)
     var physics: LiquidTabBarPhysics by mutableStateOf(initialPhysics)
 
     private val dragAnimationSpec
@@ -193,8 +194,22 @@ class DampedDragAnimation(
                     val a = fSpring + fDamping
                     currentSimVelocity += a * subDt
                     currentPos += currentSimVelocity * subDt
+
+                    // 严密物理边界碰撞约束：杜绝高速挥甩拖拽时因惯性飞出设定的 X 边界
+                    if (currentPos < valueRange.start) {
+                        currentPos = valueRange.start
+                        if (currentSimVelocity < 0f) {
+                            currentSimVelocity = 0f
+                        }
+                    } else if (currentPos > valueRange.endInclusive) {
+                        currentPos = valueRange.endInclusive
+                        if (currentSimVelocity > 0f) {
+                            currentSimVelocity = 0f
+                        }
+                    }
                 }
 
+                currentPos = currentPos.coerceIn(valueRange)
                 valueAnimation.snapTo(currentPos)
                 velocityAnimation.snapTo(currentSimVelocity)
 
@@ -261,7 +276,7 @@ class DampedDragAnimation(
                         val fixedOvershoot = dir * (0.12f * physics.dockingInertiaFactor)
 
                         if (abs(dir) > 0f && abs(fixedOvershoot) > 0.005f) {
-                            val peakTarget = target + fixedOvershoot
+                            val peakTarget = (target + fixedOvershoot).coerceIn(valueRange)
                             // 阶段 1：平滑飞向目标吸附点峰值（使用单调临界阻尼 1.0f，绝不产生与距离成正比的多余过冲）
                             valueAnimation.animateTo(
                                 targetValue = peakTarget,
@@ -292,14 +307,15 @@ class DampedDragAnimation(
             } finally {
                 // 核心保障：手指松开吸附 item 的时候必须 100% 还原到最开始 inactive 的状态
                 if (token == animationToken) {
-                    valueAnimation.snapTo(target)
+                    val settledTarget = target.coerceIn(valueRange)
+                    valueAnimation.snapTo(settledTarget)
                     pressProgressAnimation.snapTo(0f)
                     scaleXAnimation.snapTo(initialScale)
                     scaleYAnimation.snapTo(initialScale)
                     velocityAnimation.snapTo(0f)
                     jellyAnimation.snapTo(0f)
                     currentSimVelocity = 0f
-                    onAnimationSettled(target.roundToInt())
+                    onAnimationSettled(settledTarget.roundToInt())
                 }
             }
         }
