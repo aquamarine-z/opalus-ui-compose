@@ -211,6 +211,36 @@ private val physicsParamDocs = mapOf(
         increaseEffect = "调高（高于 1.05x）：按下时托盘上下变厚隆起，立体张力感更强。",
         decreaseEffect = "调低（1.00x）：按下时纵向不发生缩放形变，保持原高。",
         recommendation = "建议 1.01x ~ 1.05x（默认 1.03x）。"
+    ),
+    "velocityHorizontalFactor" to TuningParamInfo(
+        id = "velocityHorizontalFactor",
+        name = "velocityHorizontalFactor",
+        label = "拖拽速度横向拉伸倍率",
+        category = "拖拽运动流体挤压与拉伸",
+        explanation = "手指或光标拖拽移动时，根据瞬时移动速度沿横向拉伸水滴的倍率系数。调大时移动中水滴明显变宽拉长；设为 0 时拖拽过程完全不拉伸，保持原始宽度。",
+        increaseEffect = "调高（高于 1.0f）：高速拖动时光滴被大幅向左右拉长延展，流体拉丝感极强烈（过高会导致拉成很长一条）。",
+        decreaseEffect = "调低（低于 0.3f / 设为 0）：拖动时水滴几乎不被水平拉长，保持近圆形或标准胶囊体，杜绝被拉成长条。",
+        recommendation = "建议 0.30f ~ 0.80f（默认 0.65f）。"
+    ),
+    "velocityVerticalFactor" to TuningParamInfo(
+        id = "velocityVerticalFactor",
+        name = "velocityVerticalFactor",
+        label = "拖拽速度纵向挤压倍率",
+        category = "拖拽运动流体挤压与拉伸",
+        explanation = "横向拉伸水滴时，等比挤压垂直方向高度的泊松比挤压系数。模拟真实流体体积守恒（横向变长时纵向相应压扁变薄）。",
+        increaseEffect = "调高（高于 0.35f）：横向拉长时上下高度急剧被压薄，水滴变得扁平狭长。",
+        decreaseEffect = "调低（低于 0.10f / 设为 0）：横向拉伸时上下高度不被挤压，保持原高。",
+        recommendation = "建议 0.15f ~ 0.28f（默认 0.20f）。"
+    ),
+    "maxVelocityCoerce" to TuningParamInfo(
+        id = "maxVelocityCoerce",
+        name = "maxVelocityCoerce",
+        label = "拖拽最大拉伸形变上限",
+        category = "拖拽运动流体挤压与拉伸",
+        explanation = "限制水滴在极速拖动时允许达到的最大横向拉长和纵向压扁上限比例。例如 0.16 表示无论拖拽多快，横向最多只允许拉长 16%，防止拉成过长长条。",
+        increaseEffect = "调高（高于 0.25f）：允许极限拉伸幅度更大，高速挥甩时水滴被拉得很长。",
+        decreaseEffect = "调低（低于 0.10f / 设为 0）：严格约束最大形变幅度，彻底杜绝水滴被拉成过长长条覆盖相邻 Tab。",
+        recommendation = "建议 0.10f ~ 0.20f（默认 0.16f）。"
     )
 )
 
@@ -1009,8 +1039,58 @@ fun LiquidPhysicsTuningDialog(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // Group 4: 边界超界拉伸与底座形变
-                        CategoryHeader("4. 边界超界拉伸与底座形变 (Overhang & Platter Scale)")
+                        // Group 4: 拖拽速度流体挤压与拉伸 (Squash & Stretch)
+                        CategoryHeader("4. 拖拽运动流体挤压与拉伸 (Squash & Stretch)")
+
+                        ParamSliderItem(
+                            id = "velocityHorizontalFactor",
+                            name = "velocityHorizontalFactor",
+                            label = "拖拽速度横向拉伸倍率 (移动时水滴拉长拉丝程度)",
+                            value = currentPhysics.velocityHorizontalFactor,
+                            valueRange = 0.0f..2.0f,
+                            format = { "${((it * 100).roundToInt() / 100f)}x" },
+                            recommendation = "0.30f ~ 0.80f (默认 0.65f)",
+                            isActive = activeParamId == "velocityHorizontalFactor",
+                            onHover = { activeParamId = "velocityHorizontalFactor" },
+                            onValueChange = {
+                                onPhysicsChange(currentPhysics.copy(velocityHorizontalFactor = it))
+                            }
+                        )
+
+                        ParamSliderItem(
+                            id = "velocityVerticalFactor",
+                            name = "velocityVerticalFactor",
+                            label = "拖拽速度纵向挤压倍率 (移动时水滴上下变扁程度)",
+                            value = currentPhysics.velocityVerticalFactor,
+                            valueRange = 0.0f..1.0f,
+                            format = { "${((it * 100).roundToInt() / 100f)}x" },
+                            recommendation = "0.15f ~ 0.28f (默认 0.20f)",
+                            isActive = activeParamId == "velocityVerticalFactor",
+                            onHover = { activeParamId = "velocityVerticalFactor" },
+                            onValueChange = {
+                                onPhysicsChange(currentPhysics.copy(velocityVerticalFactor = it))
+                            }
+                        )
+
+                        ParamSliderItem(
+                            id = "maxVelocityCoerce",
+                            name = "maxVelocityCoerce",
+                            label = "拖拽最大拉伸形变上限 (防止拉成过长长条的硬截断)",
+                            value = currentPhysics.maxVelocityCoerce,
+                            valueRange = 0.0f..0.50f,
+                            format = { "+${(it * 100).roundToInt()}% 宽" },
+                            recommendation = "0.10f ~ 0.20f (默认 0.16f)",
+                            isActive = activeParamId == "maxVelocityCoerce",
+                            onHover = { activeParamId = "maxVelocityCoerce" },
+                            onValueChange = {
+                                onPhysicsChange(currentPhysics.copy(maxVelocityCoerce = it))
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Group 5: 边界超界拉伸与底座形变
+                        CategoryHeader("5. 边界超界拉伸与底座形变 (Overhang & Platter Scale)")
 
                         ParamSliderItem(
                             id = "maxOverhang",
