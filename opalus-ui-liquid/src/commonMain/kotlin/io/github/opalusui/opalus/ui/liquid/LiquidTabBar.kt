@@ -64,7 +64,7 @@ fun <T> LiquidTabBar(
                         scaleX = state.scaleX
                         scaleY = state.scaleY
                     }
-                    .pointerInput(tabWidth, items.size, isLtr) {
+                    .pointerInput(tabWidth, items.size, isLtr, state) {
                         if (tabWidth <= 0f) return@pointerInput
                         val totalW = constraints.maxWidth.toFloat()
 

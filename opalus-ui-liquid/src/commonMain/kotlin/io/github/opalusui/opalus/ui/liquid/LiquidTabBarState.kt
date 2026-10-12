@@ -14,10 +14,12 @@ class LiquidTabBarState(
     val animationScope: CoroutineScope,
     initialIndex: Int,
     val tabsCount: Int,
-    val physics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics()
+    initialPhysics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics()
 ) {
     var currentIndex by mutableIntStateOf(initialIndex)
         private set
+
+    var physics by mutableStateOf(initialPhysics)
 
     val dampedAnimation = DampedDragAnimation(
         animationScope = animationScope,
@@ -26,11 +28,18 @@ class LiquidTabBarState(
         visibilityThreshold = physics.dragVisibilityThreshold,
         initialScale = 1f,
         pressedScale = physics.platterActiveScale,
-        physics = physics,
+        initialPhysics = initialPhysics,
         onDragStarted = {},
         onDragStopped = {},
         onDrag = { _, _ -> }
     )
+
+    fun updatePhysics(newPhysics: LiquidTabBarPhysics) {
+        if (physics != newPhysics) {
+            physics = newPhysics
+            dampedAnimation.physics = newPhysics
+        }
+    }
 
     val animatedValue: Float
         get() = dampedAnimation.value
@@ -164,13 +173,18 @@ fun rememberLiquidTabBarState(
 ): LiquidTabBarState {
     val animationScope = rememberCoroutineScope()
     val initial = remember { selectedTabIndex().coerceIn(0, (tabsCount - 1).coerceAtLeast(0)) }
-    val state = remember(animationScope, tabsCount, physics) {
+    val state = remember(animationScope, tabsCount) {
         LiquidTabBarState(
             animationScope = animationScope,
             initialIndex = initial,
             tabsCount = tabsCount,
-            physics = physics
+            initialPhysics = physics
         )
+    }
+
+    // 动态同步物理参数，避免状态机被销毁重建
+    SideEffect {
+        state.updatePhysics(physics)
     }
 
     LaunchedEffect(state, selectedTabIndex) {

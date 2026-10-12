@@ -3,6 +3,9 @@ package io.github.opalusui.opalus.ui.liquid
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.MutatorMutex
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
@@ -27,22 +30,23 @@ class DampedDragAnimation(
     val visibilityThreshold: Float,
     val initialScale: Float,
     val pressedScale: Float,
-    val physics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics(),
+    initialPhysics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics(),
     val onDragStarted: DampedDragAnimation.(position: Offset) -> Unit = {},
     val onDragStopped: DampedDragAnimation.() -> Unit = {},
     val onDrag: DampedDragAnimation.(size: IntSize, dragAmount: Offset) -> Unit = { _, _ -> },
 ) {
+    var physics: LiquidTabBarPhysics by mutableStateOf(initialPhysics)
 
-    private val dragAnimationSpec =
-        spring(physics.dragDampingRatio, physics.dragStiffness, visibilityThreshold)
-    private val dockingAnimationSpec =
-        spring(physics.dockingDampingRatio, physics.dockingStiffness, visibilityThreshold)
+    private val dragAnimationSpec
+        get() = spring(physics.dragDampingRatio, physics.dragStiffness, visibilityThreshold)
+    private val dockingAnimationSpec
+        get() = spring(physics.dockingDampingRatio, physics.dockingStiffness, visibilityThreshold)
     private val velocityAnimationSpec =
         spring(0.65f, 380f, visibilityThreshold * 10f)
-    private val growProgressAnimationSpec =
-        spring(physics.growDampingRatio, physics.growStiffness, 0.001f)
-    private val shrinkProgressAnimationSpec =
-        spring(physics.shrinkDampingRatio, physics.shrinkStiffness, 0.001f)
+    private val growProgressAnimationSpec
+        get() = spring(physics.growDampingRatio, physics.growStiffness, 0.001f)
+    private val shrinkProgressAnimationSpec
+        get() = spring(physics.shrinkDampingRatio, physics.shrinkStiffness, 0.001f)
     private val scaleXAnimationSpec =
         spring(0.65f, 280f, 0.001f)
     private val scaleYAnimationSpec =
@@ -192,9 +196,7 @@ class DampedDragAnimation(
                             targetValue = target,
                             animationSpec = dockingAnimationSpec,
                             initialVelocity = initialVel
-                        ) {
-                            updateVelocity()
-                        }
+                        )
                     }
                 }
             } finally {
@@ -211,6 +213,8 @@ class DampedDragAnimation(
         }
     }
 
+    private var velocityJob: Job? = null
+
     private fun updateVelocity() {
         velocityTracker.addPosition(
             timeMark.elapsedNow().inWholeMilliseconds,
@@ -219,7 +223,10 @@ class DampedDragAnimation(
         val rangeSpan = (valueRange.endInclusive - valueRange.start).coerceAtLeast(0.001f)
         val targetVelocity = velocityTracker.calculateVelocity().x / rangeSpan
         if (targetVelocity.isFinite()) {
-            animationScope.launch { velocityAnimation.animateTo(targetVelocity, velocityAnimationSpec) }
+            velocityJob?.cancel()
+            velocityJob = animationScope.launch {
+                velocityAnimation.animateTo(targetVelocity, velocityAnimationSpec)
+            }
         }
     }
 }

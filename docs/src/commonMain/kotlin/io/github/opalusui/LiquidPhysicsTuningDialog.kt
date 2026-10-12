@@ -667,10 +667,7 @@ private fun ParamSliderItem(
 
             Slider(
                 value = value,
-                onValueChange = {
-                    onHover()
-                    onValueChange(it)
-                },
+                onValueChange = onValueChange,
                 valueRange = valueRange,
                 modifier = Modifier.fillMaxWidth()
             )
