@@ -24,10 +24,12 @@ class LiquidTabBarState(
     val dampedAnimation = DampedDragAnimation(
         animationScope = animationScope,
         initialValue = initialIndex.toFloat(),
-        valueRange = (-physics.maxOverhang)..(tabsCount - 1 + physics.maxOverhang),
+        valueRange = (-2.0f)..(tabsCount + 1.0f),
         visibilityThreshold = physics.dragVisibilityThreshold,
         initialScale = 1f,
         pressedScale = physics.platterActiveScale,
+        pressedScaleX = physics.platterActiveScaleX,
+        pressedScaleY = physics.platterActiveScaleY,
         initialPhysics = initialPhysics,
         onDragStarted = {},
         onDragStopped = {},
@@ -70,7 +72,8 @@ class LiquidTabBarState(
         totalWidth: Float,
         tabWidth: Float,
         padHorizontalPx: Float,
-        isLtr: Boolean
+        isLtr: Boolean,
+        maxOverhangPx: Float = tabWidth * 0.38f
     ): Float {
         val maxTab = (tabsCount - 1).toFloat()
         val rawTarget = if (isLtr) {
@@ -79,14 +82,15 @@ class LiquidTabBarState(
             (totalWidth - padHorizontalPx - x) / tabWidth - 0.5f
         }
 
+        val maxOverhangSlots = (maxOverhangPx / tabWidth).coerceAtLeast(0.001f)
         return when {
             rawTarget < 0f -> {
                 val excess = -rawTarget
-                -physics.maxOverhang * tanh(excess / (physics.maxOverhang * physics.overhangResistance))
+                -maxOverhangSlots * tanh(excess / (maxOverhangSlots * physics.overhangResistance))
             }
             rawTarget > maxTab -> {
                 val excess = rawTarget - maxTab
-                maxTab + physics.maxOverhang * tanh(excess / (physics.maxOverhang * physics.overhangResistance))
+                maxTab + maxOverhangSlots * tanh(excess / (maxOverhangSlots * physics.overhangResistance))
             }
             else -> rawTarget
         }
@@ -114,10 +118,11 @@ class LiquidTabBarState(
         totalWidth: Float,
         tabWidth: Float,
         padHorizontalPx: Float,
-        isLtr: Boolean
+        isLtr: Boolean,
+        maxOverhangPx: Float = tabWidth * 0.38f
     ) {
         dampedAnimation.press()
-        val target = computeTargetFromPointer(x, totalWidth, tabWidth, padHorizontalPx, isLtr)
+        val target = computeTargetFromPointer(x, totalWidth, tabWidth, padHorizontalPx, isLtr, maxOverhangPx)
         dampedAnimation.updateValue(target)
     }
 
@@ -129,9 +134,10 @@ class LiquidTabBarState(
         totalWidth: Float,
         tabWidth: Float,
         padHorizontalPx: Float,
-        isLtr: Boolean
+        isLtr: Boolean,
+        maxOverhangPx: Float = tabWidth * 0.38f
     ) {
-        val target = computeTargetFromPointer(x, totalWidth, tabWidth, padHorizontalPx, isLtr)
+        val target = computeTargetFromPointer(x, totalWidth, tabWidth, padHorizontalPx, isLtr, maxOverhangPx)
         dampedAnimation.updateValue(target)
     }
 

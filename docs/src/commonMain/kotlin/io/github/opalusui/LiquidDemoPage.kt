@@ -24,6 +24,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,6 +45,7 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBar
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBarDefaults
+import io.github.opalusui.opalus.ui.liquid.LiquidTabBarDimensions
 import io.github.opalusui.opalus.ui.liquid.LiquidTabItem
 
 @Composable
@@ -58,7 +60,9 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
     var optics by remember {
         mutableStateOf(LiquidTabBarDefaults.optics(isDark = isDarkTheme, chromaticAberration = true))
     }
+    var dimensions by remember { mutableStateOf(LiquidTabBarDefaults.dimensions()) }
     var showPhysicsDialog by remember { mutableStateOf(false) }
+    var showExportDialog by remember { mutableStateOf(false) }
 
     val playgroundBackdrop = rememberLayerBackdrop()
 
@@ -128,6 +132,13 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                                 ) {
                                     Text("参数调优", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                                 }
+
+                                OutlinedButton(
+                                    onClick = { showExportDialog = true },
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text("导出", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                }
                             }
                         }
                     } else {
@@ -172,6 +183,13 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text("Physics & Optics Tuner / 参数调优", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                }
+
+                                OutlinedButton(
+                                    onClick = { showExportDialog = true },
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("导出配置 (HTML/JSON)", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -273,6 +291,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                             ),
                             optics = optics,
                             physics = physics,
+                            dimensions = dimensions,
                             modifier = Modifier
                                 .widthIn(max = 440.dp)
                                 .fillMaxWidth(0.92f),
@@ -362,6 +381,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                             ),
                             optics = optics,
                             physics = physics,
+                            dimensions = dimensions,
                             modifier = Modifier.widthIn(max = 380.dp),
                             inactiveItem = { _, item ->
                                 LiquidTabItem(
@@ -589,17 +609,21 @@ val customOptics = LiquidTabBarDefaults.optics(
     val containerHeight: Dp = 84.dp,
     val platterHeight: Dp = 58.dp,
     val indicatorIdleHeight: Dp = 50.dp,
-    val indicatorActiveHeight: Dp = 72.dp,
+    val indicatorActiveHeightScale: Float = 1.44f,
+    val indicatorActiveWidthScale: Float = 1.0f,
     val horizontalPadding: Dp = 4.dp,
     val borderWidth: Dp = 0.6.dp,
     val indicatorBorderWidth: Dp = 0.4.dp
-)""",
-            description = "Defines the exact physical proportions of the navigation dock. Notice that `containerHeight` (84dp) is intentionally taller than `platterHeight` (58dp): this creates vertical headroom for the fluid droplet to expand (+7dp top, +7dp bottom) during interactive dragging without being clipped by parent bounds.",
+) {
+    val indicatorActiveHeight: Dp get() = indicatorIdleHeight * indicatorActiveHeightScale
+}""",
+            description = "Defines the exact physical proportions and scaling ratios of the navigation dock. `containerHeight` (84dp) is intentionally taller than `platterHeight` (58dp) to provide vertical headroom for active droplet expansion. `indicatorActiveHeightScale` (1.44x) scales active droplet height to 72dp, while `indicatorActiveWidthScale` (1.0x) governs horizontal active expansion.",
             parameters = listOf(
                 ParamItem("containerHeight", "Dp", "84.dp", "Total bounding box height accommodating droplet expansion."),
                 ParamItem("platterHeight", "Dp", "58.dp", "Height of the frosted capsule dock platter."),
                 ParamItem("indicatorIdleHeight", "Dp", "50.dp", "Height of the droplet indicator when resting inside the platter."),
-                ParamItem("indicatorActiveHeight", "Dp", "72.dp", "Height of the droplet lens while dragged (+7dp vertical overhang)."),
+                ParamItem("indicatorActiveHeightScale", "Float", "1.44f", "Vertical scaling factor when active (50dp * 1.44 = 72dp)."),
+                ParamItem("indicatorActiveWidthScale", "Float", "1.0f", "Horizontal scaling factor relative to tab slot width when active."),
                 ParamItem("horizontalPadding", "Dp", "4.dp", "Horizontal inset between platter edges and tab slots."),
                 ParamItem("borderWidth", "Dp", "0.6.dp", "Stroke width of the outer platter border."),
                 ParamItem("indicatorBorderWidth", "Dp", "0.4.dp", "Stroke width of the droplet lens border.")
@@ -608,7 +632,8 @@ val customOptics = LiquidTabBarDefaults.optics(
     containerHeight = 72.dp,
     platterHeight = 50.dp,
     indicatorIdleHeight = 44.dp,
-    indicatorActiveHeight = 62.dp
+    indicatorActiveHeightScale = 1.35f,
+    indicatorActiveWidthScale = 1.05f
 )"""
         )
 
@@ -657,52 +682,54 @@ val customOptics = LiquidTabBarDefaults.optics(
             className = "LiquidTabBarPhysics",
             kind = "Kinematics Tokens (Immutable)",
             signature = """@Immutable data class LiquidTabBarPhysics(
-    val maxOverhang: Float = 0.38f,
-    val overhangResistance: Float = 1.5f,
-    val platterActiveScale: Float = 1.03f,
+    val maxOverhang: Dp = 38.dp,
+    val overhangResistance: Float = 1.8f,
+    val platterActiveScaleX: Float = 1.03f,
+    val platterActiveScaleY: Float = 1.03f,
     val itemActiveScale: Float = 1.05f,
     val activeItemScale: Float = 1.15f,
     val indicatorActiveScale: Float = 1.05f,
-    val velocityHorizontalFactor: Float = 0.75f,
-    val velocityVerticalFactor: Float = 0.25f,
-    val maxVelocityCoerce: Float = 0.2f,
+    val velocityHorizontalFactor: Float = 1.35f,
+    val velocityVerticalFactor: Float = 0.38f,
+    val maxVelocityCoerce: Float = 0.36f,
     val dragVisibilityThreshold: Float = 0.001f,
-    val dragDampingRatio: Float = 0.85f,
-    val dragStiffness: Float = 950f,
-    val dockingDampingRatio: Float = 0.62f,
-    val dockingStiffness: Float = 600f,
-    val dockingInertiaFactor: Float = 1.0f,
-    val growDampingRatio: Float = 0.68f,
-    val growStiffness: Float = 1350f,
-    val shrinkDampingRatio: Float = 0.65f,
-    val shrinkStiffness: Float = 420f,
-    val dropletElasticity: Float = 0.35f,
+    val dragDampingRatio: Float = 0.45f,
+    val dragStiffness: Float = 190f,
+    val dockingDampingRatio: Float = 0.50f,
+    val dockingStiffness: Float = 480f,
+    val dockingInertiaFactor: Float = 1.25f,
+    val growDampingRatio: Float = 0.64f,
+    val growStiffness: Float = 2400f,
+    val shrinkDampingRatio: Float = 0.46f,
+    val shrinkStiffness: Float = 180f,
+    val dropletElasticity: Float = 0.85f,
     val dockingShrinkThreshold: Float = 0.35f
 )""",
             description = "Defines the physical kinematics governing drag damping, spring stiffness, rubber-band resistance at container borders, grow/shrink speeds, docking inertia deviation, and droplet squash-and-stretch elasticity.",
             parameters = listOf(
-                ParamItem("maxOverhang", "Float", "0.38f", "Maximum fraction of tab width the droplet can stretch past the first or last tab."),
-                ParamItem("overhangResistance", "Float", "1.5f", "Rubber-band exponent dampening pointer drag outside boundary slots."),
-                ParamItem("platterActiveScale", "Float", "1.03f", "Scale applied to the entire dock when pointer is pressed."),
+                ParamItem("maxOverhang", "Dp", "38.dp", "Maximum distance in Dp the droplet is allowed to be dragged past the navbar edge along the X axis."),
+                ParamItem("overhangResistance", "Float", "1.8f", "Rubber-band exponent dampening pointer drag outside boundary slots."),
+                ParamItem("platterActiveScaleX", "Float", "1.03f", "Horizontal scale multiplier of the navbar platter body when active/pressed."),
+                ParamItem("platterActiveScaleY", "Float", "1.03f", "Vertical scale multiplier of the navbar platter body when active/pressed."),
                 ParamItem("itemActiveScale", "Float", "1.05f", "Scale applied to inactive items during drag."),
                 ParamItem("activeItemScale", "Float", "1.15f", "Breathing zoom scale applied to the active tab button."),
                 ParamItem("indicatorActiveScale", "Float", "1.05f", "Scale applied to the fluid droplet during drag."),
-                ParamItem("velocityHorizontalFactor", "Float", "0.75f", "Horizontal aspect-ratio elongation driven by drag velocity."),
-                ParamItem("velocityVerticalFactor", "Float", "0.25f", "Vertical aspect-ratio compression driven by drag velocity."),
-                ParamItem("maxVelocityCoerce", "Float", "0.2f", "Clamp limit preventing extreme distortion during fast flicks."),
-                ParamItem("dragDampingRatio / dragStiffness", "Float", "0.85f / 950f", "Spring physics for droplet transit motion during pointer drag."),
-                ParamItem("dockingDampingRatio / dockingStiffness", "Float", "0.62f / 600f", "Under-damped spring governing inertial entry overshoot (left entry leans right, right entry leans left)."),
-                ParamItem("dockingInertiaFactor", "Float", "1.0f", "Inertial impulse multiplier applied to fling velocity and docking displacement."),
-                ParamItem("growDampingRatio / growStiffness", "Float", "0.68f / 1350f", "High-speed snappy expansion dynamics with liquid surface tension bounce."),
-                ParamItem("shrinkDampingRatio / shrinkStiffness", "Float", "0.65f / 420f", "Soft, gradual easing dynamics when settling into a docked slot with elastic rebound."),
-                ParamItem("dropletElasticity", "Float", "0.45f", "Controls settling duration and harmonic jelly bounce dynamics when returning from active state to inactive rest."),
+                ParamItem("velocityHorizontalFactor", "Float", "1.35f", "Horizontal aspect-ratio elongation driven by drag velocity."),
+                ParamItem("velocityVerticalFactor", "Float", "0.38f", "Vertical aspect-ratio compression driven by drag velocity."),
+                ParamItem("maxVelocityCoerce", "Float", "0.36f", "Clamp limit preventing extreme distortion during fast flicks."),
+                ParamItem("dragDampingRatio / dragStiffness", "Float", "0.45f / 190f", "Spring physics for droplet transit motion during pointer drag."),
+                ParamItem("dockingDampingRatio / dockingStiffness", "Float", "0.50f / 480f", "Under-damped spring governing inertial entry overshoot (left entry leans right, right entry leans left)."),
+                ParamItem("dockingInertiaFactor", "Float", "1.25f", "Inertial impulse multiplier applied to fling velocity and docking displacement."),
+                ParamItem("growDampingRatio / growStiffness", "Float", "0.64f / 2400f", "High-speed snappy expansion dynamics with liquid surface tension bounce."),
+                ParamItem("shrinkDampingRatio / shrinkStiffness", "Float", "0.46f / 180f", "Soft, gradual easing dynamics when settling into a docked slot with elastic rebound."),
+                ParamItem("dropletElasticity", "Float", "0.85f", "Controls settling duration and harmonic jelly bounce dynamics when returning from active state to inactive rest."),
                 ParamItem("dockingShrinkThreshold", "Float", "0.35f", "Distance threshold to target slot before the traveling droplet begins shrinking.")
             ),
             codeExample = """val fluidPhysics = LiquidTabBarDefaults.physics(
-    dockingDampingRatio = 0.58f,
-    dockingInertiaFactor = 1.2f,
-    dropletElasticity = 0.45f,
-    shrinkDampingRatio = 0.62f
+    dockingDampingRatio = 0.50f,
+    dockingInertiaFactor = 1.25f,
+    dropletElasticity = 0.85f,
+    shrinkDampingRatio = 0.46f
 )"""
         )
 
@@ -793,7 +820,20 @@ Box {
             onPhysicsChange = { physics = it },
             currentOptics = optics,
             onOpticsChange = { optics = it },
+            currentDimensions = dimensions,
+            onDimensionsChange = { dimensions = it },
+            onExportClick = { showExportDialog = true },
             onDismissRequest = { showPhysicsDialog = false }
+        )
+    }
+
+    if (showExportDialog) {
+        LiquidConfigExportDialog(
+            physics = physics,
+            dimensions = dimensions,
+            optics = optics,
+            isDarkTheme = isDarkTheme,
+            onDismissRequest = { showExportDialog = false }
         )
     }
 }

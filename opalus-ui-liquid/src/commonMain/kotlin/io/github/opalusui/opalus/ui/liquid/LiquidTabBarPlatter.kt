@@ -90,20 +90,21 @@ internal fun <T> LiquidTabBarPlatter(
                 .drawWithContent {
                     val rawProgress = state.pressProgress
                     val visualProgress = rawProgress.coerceIn(0f, 1f)
-                    val elasticProgress = rawProgress.coerceIn(-0.25f, 1f)
+                    val elasticProgress = rawProgress.coerceIn(-0.45f, 1f)
                     val currentDropletHeight = lerp(
                         dimensions.indicatorIdleHeight.toPx(),
                         dimensions.indicatorActiveHeight.toPx(),
                         elasticProgress.coerceIn(0f, 1f)
                     )
                     val scale = lerp(1f, physics.indicatorActiveScale, visualProgress)
-                    var scaleX = scale
+                    val widthScale = lerp(1f, dimensions.indicatorActiveWidthScale, visualProgress)
+                    var scaleX = scale * widthScale
                     var scaleY = 1f
 
                     if (elasticProgress < 0f) {
                         val bottomBounce = elasticProgress * physics.dropletElasticity
-                        scaleX *= (1f - bottomBounce * 0.15f)
-                        scaleY *= (1f + bottomBounce * 0.20f).coerceAtLeast(0.7f)
+                        scaleX *= (1f - bottomBounce * 0.22f)
+                        scaleY *= (1f + bottomBounce * 0.28f).coerceAtLeast(0.65f)
                     }
 
                     if (visualProgress > 0.001f) {

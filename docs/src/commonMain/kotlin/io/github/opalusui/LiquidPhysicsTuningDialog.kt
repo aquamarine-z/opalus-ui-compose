@@ -8,9 +8,11 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -50,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBar
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBarDefaults
+import io.github.opalusui.opalus.ui.liquid.LiquidTabBarDimensions
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBarOptics
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBarPhysics
 import io.github.opalusui.opalus.ui.liquid.LiquidTabItem
@@ -92,11 +95,11 @@ private val physicsParamDocs = mapOf(
     "dockingInertiaFactor" to TuningParamInfo(
         id = "dockingInertiaFactor",
         name = "dockingInertiaFactor",
-        label = "槽位惯性冲量倍率",
+        label = "槽位惯性定值偏转倍率",
         category = "槽位吸附与惯性进入",
-        explanation = "等比例缩放滑动脱手甩动或轻点进入 item 时的惯性动量大小。",
-        increaseEffect = "调高（高于 1.2f）：进入槽位时左右偏转过冲幅度成倍放大，动态冲击力更强烈。",
-        decreaseEffect = "调低（低于 0.6f / 设为 0）：动量冲量被大幅削弱或关闭，水滴直接垂直落入槽位。",
+        explanation = "控制水滴飞入槽位时的定值惯性偏转/冲量过冲大小。严格定值，与飞行距离与飞行时长无关。",
+        increaseEffect = "调高（高于 1.2f）：进入槽位时定值过冲幅度放大，冲击感与回弹更明显。",
+        decreaseEffect = "调低（低于 0.6f / 设为 0）：定值过冲幅度缩小或关闭，水滴平稳直入槽位中心无偏转。",
         recommendation = "建议 0.8f ~ 1.3f（默认 1.0f）。"
     ),
     "dockingShrinkThreshold" to TuningParamInfo(
@@ -178,6 +181,36 @@ private val physicsParamDocs = mapOf(
         increaseEffect = "调高（高于 500f）：水滴紧随手速，拉开的滞后距离很短，贴手感极强。",
         decreaseEffect = "调低（低于 200f）：产生像橡皮筋拉动水珠般明显的流体滞后感，光标拉开一段距离水滴才加速跟上，反向时惯性显著。",
         recommendation = "建议 200f ~ 350f（默认 260f）。"
+    ),
+    "maxOverhang" to TuningParamInfo(
+        id = "maxOverhang",
+        name = "maxOverhang",
+        label = "边界允许拉出极限 (像素)",
+        category = "边界超界拉伸与底座形变",
+        explanation = "水滴被指针拖拽拉出最左或最右槽位时，允许拉出托盘两端边缘的最大物理像素/Dp距离。",
+        increaseEffect = "调高（高于 50.dp）：允许拉出容器边缘很长距离，黏滞拉伸拉丝感极度夸张。",
+        decreaseEffect = "调低（低于 20.dp）：水滴受强硬物理边界拘束，几乎无法拉出两端胶囊外。",
+        recommendation = "建议 25.dp ~ 50.dp（默认 38.dp）。"
+    ),
+    "platterActiveScaleX" to TuningParamInfo(
+        id = "platterActiveScaleX",
+        name = "platterActiveScaleX",
+        label = "激活态底座 X 轴膨胀倍率",
+        category = "边界超界拉伸与底座形变",
+        explanation = "手指或光标按下拖拽水滴时，整个底层托盘在横向（X轴）上的呼吸膨胀系数。",
+        increaseEffect = "调高（高于 1.05x）：按下时托盘向左右两侧明显舒展张开，弹性幅度更大。",
+        decreaseEffect = "调低（1.00x）：按下时横向不发生缩放形变，保持原宽。",
+        recommendation = "建议 1.01x ~ 1.05x（默认 1.03x）。"
+    ),
+    "platterActiveScaleY" to TuningParamInfo(
+        id = "platterActiveScaleY",
+        name = "platterActiveScaleY",
+        label = "激活态底座 Y 轴膨胀倍率",
+        category = "边界超界拉伸与底座形变",
+        explanation = "手指或光标按下拖拽水滴时，整个底层托盘在纵向（Y轴）上的呼吸膨胀系数。",
+        increaseEffect = "调高（高于 1.05x）：按下时托盘上下变厚隆起，立体张力感更强。",
+        decreaseEffect = "调低（1.00x）：按下时纵向不发生缩放形变，保持原高。",
+        recommendation = "建议 1.01x ~ 1.05x（默认 1.03x）。"
     )
 )
 
@@ -324,8 +357,62 @@ private val opticsParamDocs = mapOf(
     )
 )
 
+private val dimensionsParamDocs = mapOf(
+    "indicatorActiveHeightScale" to TuningParamInfo(
+        id = "indicatorActiveHeightScale",
+        name = "indicatorActiveHeightScale",
+        label = "激活态水滴高度倍率",
+        category = "水滴激活形变倍率",
+        explanation = "水滴按下或拖拽处于激活状态时，相对普通静止态高度 (50dp) 的等比缩放倍率。默认 1.44x 对应 72dp 像素高度。",
+        increaseEffect = "调高（高于 1.55x）：水滴纵向拔高，上下溢出底座托盘更显著，悬浮立体高度感极强。",
+        decreaseEffect = "调低（低于 1.25x / 设为 1.0x）：水滴更紧凑，几乎不超出托盘高度，更显扁平内敛。",
+        recommendation = "建议 1.30x ~ 1.55x（默认 1.44x，对应 72dp 黄金悬浮比例）。"
+    ),
+    "indicatorActiveWidthScale" to TuningParamInfo(
+        id = "indicatorActiveWidthScale",
+        name = "indicatorActiveWidthScale",
+        label = "激活态水滴宽度倍率",
+        category = "水滴激活形变倍率",
+        explanation = "水滴按下或拖拽处于激活状态时，相对单个槽位静态宽度的等比缩放倍率。默认 1.0x 保持原宽。",
+        increaseEffect = "调高（高于 1.15x）：水滴更饱满圆润宽厚，视觉体积更膨胀，犹如液面表面张力外张。",
+        decreaseEffect = "调低（低于 0.90x）：水滴收窄苗条，定位更紧凑锐利。",
+        recommendation = "建议 0.90x ~ 1.20x（默认 1.00x）。"
+    ),
+    "indicatorIdleHeight" to TuningParamInfo(
+        id = "indicatorIdleHeight",
+        name = "indicatorIdleHeight",
+        label = "普通态水滴槽位高度",
+        category = "基础几何尺寸",
+        explanation = "水滴静止休眠在未选中/常规槽位时的物理几何高度（Dp）。",
+        increaseEffect = "调高（高于 52.dp）：静止态槽位更饱满贴合底座，上下内边距变小。",
+        decreaseEffect = "调低（低于 44.dp）：静止态槽位更纤巧居中，内边距更大。",
+        recommendation = "建议 46.dp ~ 52.dp（默认 50.dp）。"
+    ),
+    "platterHeight" to TuningParamInfo(
+        id = "platterHeight",
+        name = "platterHeight",
+        label = "托盘底座物理高度",
+        category = "基础几何尺寸",
+        explanation = "底部磨砂胶囊底座的物理几何高度（Dp）。",
+        increaseEffect = "调高（高于 64.dp）：底座更开阔厚实，适合大字体或双行标签。",
+        decreaseEffect = "调低（低于 52.dp）：底座更纤薄克制，占用屏幕垂直高度更少。",
+        recommendation = "建议 54.dp ~ 64.dp（默认 58.dp）。"
+    ),
+    "containerHeight" to TuningParamInfo(
+        id = "containerHeight",
+        name = "containerHeight",
+        label = "外层容器总高度",
+        category = "基础几何尺寸",
+        explanation = "整个导航栏外层布局容器的高度（Dp），预留足够空间防止水滴激活上下悬浮时被裁剪。",
+        increaseEffect = "调高（高于 90.dp）：为水滴上下悬浮提供更大的安全裕量，杜绝被父组件溢出截断。",
+        decreaseEffect = "调低（低于 78.dp）：高度若小于水滴激活高度，可能导致悬浮水滴边缘被裁切。",
+        recommendation = "建议 80.dp ~ 96.dp（默认 84.dp）。"
+    )
+)
+
 enum class TuningTab {
     Physics,
+    Dimensions,
     Optics
 }
 
@@ -336,6 +423,9 @@ fun LiquidPhysicsTuningDialog(
     onPhysicsChange: (LiquidTabBarPhysics) -> Unit,
     currentOptics: LiquidTabBarOptics = LiquidTabBarDefaults.optics(isDark = isDarkTheme),
     onOpticsChange: (LiquidTabBarOptics) -> Unit = {},
+    currentDimensions: LiquidTabBarDimensions = LiquidTabBarDefaults.dimensions(),
+    onDimensionsChange: (LiquidTabBarDimensions) -> Unit = {},
+    onExportClick: () -> Unit = {},
     onDismissRequest: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(TuningTab.Physics) }
@@ -343,13 +433,13 @@ fun LiquidPhysicsTuningDialog(
     var previewTab by remember { mutableStateOf(0) }
     val previewTabs = remember { listOf("Tab 1", "Tab 2", "Tab 3", "Tab 4") }
 
-    val activeInfo = if (selectedTab == TuningTab.Physics) {
-        physicsParamDocs[activeParamId] ?: physicsParamDocs["dockingDampingRatio"]!!
-    } else {
-        opticsParamDocs[activeParamId] ?: opticsParamDocs["platterRefractionAmount"]!!
+    val activeInfo = when (selectedTab) {
+        TuningTab.Physics -> physicsParamDocs[activeParamId] ?: physicsParamDocs["dockingDampingRatio"]!!
+        TuningTab.Dimensions -> dimensionsParamDocs[activeParamId] ?: dimensionsParamDocs["indicatorActiveHeightScale"]!!
+        TuningTab.Optics -> opticsParamDocs[activeParamId] ?: opticsParamDocs["platterRefractionAmount"]!!
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.65f))
@@ -360,11 +450,14 @@ fun LiquidPhysicsTuningDialog(
             ),
         contentAlignment = Alignment.Center
     ) {
+        val isMobile = maxWidth < 720.dp
+        val cardPad = if (isMobile) 14.dp else 24.dp
+
         Card(
             modifier = Modifier
                 .widthIn(max = 860.dp)
-                .fillMaxWidth(0.96f)
-                .heightIn(max = 760.dp)
+                .fillMaxWidth(if (isMobile) 0.98f else 0.96f)
+                .fillMaxHeight(if (isMobile) 0.96f else 0.88f)
                 .clip(RoundedCornerShape(24.dp))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -377,54 +470,111 @@ fun LiquidPhysicsTuningDialog(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)
+                    .fillMaxSize()
+                    .padding(cardPad)
             ) {
                 // 1. Top Header Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                if (isMobile) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Text(
-                            text = "Liquid Tab Bar 动力学与光学折射参数调优",
-                            style = MaterialTheme.typography.titleLarge,
+                            text = "Liquid Tab Bar 参数调优",
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Text(
-                            text = "实时调节流体弹簧动力学与光学折射透镜参数，即刻查看惯性进入、拉动流动与凸透镜折射效果。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    when (selectedTab) {
+                                        TuningTab.Physics -> onPhysicsChange(LiquidTabBarDefaults.physics())
+                                        TuningTab.Dimensions -> onDimensionsChange(LiquidTabBarDefaults.dimensions())
+                                        TuningTab.Optics -> onOpticsChange(LiquidTabBarDefaults.optics(isDark = isDarkTheme))
+                                    }
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("重置", fontSize = 11.sp)
+                            }
+                            OutlinedButton(
+                                onClick = onExportClick,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("导出", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            FilledTonalButton(
+                                onClick = onDismissRequest,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(0.9f)
+                            ) {
+                                Text("关闭", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
                     }
-
+                } else {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedButton(
-                            onClick = {
-                                if (selectedTab == TuningTab.Physics) {
-                                    onPhysicsChange(LiquidTabBarDefaults.physics())
-                                } else {
-                                    onOpticsChange(LiquidTabBarDefaults.optics(isDark = isDarkTheme))
-                                }
-                            },
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                if (selectedTab == TuningTab.Physics) "重置动力学默认值" else "重置光学默认值",
-                                fontSize = 12.sp
+                                text = "Liquid Tab Bar 动力学与光学折射参数调优",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "实时调节流体弹簧动力学、几何倍率与光学折射透镜参数，即刻查看惯性进入、拉动流动与凸透镜折射效果。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
-                        FilledTonalButton(
-                            onClick = onDismissRequest,
-                            shape = RoundedCornerShape(10.dp)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("关闭", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            OutlinedButton(
+                                onClick = {
+                                    when (selectedTab) {
+                                        TuningTab.Physics -> onPhysicsChange(LiquidTabBarDefaults.physics())
+                                        TuningTab.Dimensions -> onDimensionsChange(LiquidTabBarDefaults.dimensions())
+                                        TuningTab.Optics -> onOpticsChange(LiquidTabBarDefaults.optics(isDark = isDarkTheme))
+                                    }
+                                },
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text(
+                                    when (selectedTab) {
+                                        TuningTab.Physics -> "重置动力学默认值"
+                                        TuningTab.Dimensions -> "重置尺寸默认值"
+                                        TuningTab.Optics -> "重置光学默认值"
+                                    },
+                                    fontSize = 12.sp
+                                )
+                            }
+
+                            OutlinedButton(
+                                onClick = onExportClick,
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("导出配置 (HTML/JSON)", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+
+                            FilledTonalButton(
+                                onClick = onDismissRequest,
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("关闭", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
                         }
                     }
                 }
@@ -463,6 +613,7 @@ fun LiquidPhysicsTuningDialog(
                                 ),
                                 optics = currentOptics,
                                 physics = currentPhysics,
+                                dimensions = currentDimensions,
                                 modifier = Modifier
                                     .widthIn(max = 420.dp)
                                     .fillMaxWidth(),
@@ -496,10 +647,10 @@ fun LiquidPhysicsTuningDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 3. Tab Switcher (动力学 vs 光学折射)
+                // 3. Tab Switcher (动力学 vs 尺寸与倍率 vs 光学折射)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     FilledTonalButton(
                         onClick = {
@@ -509,13 +660,33 @@ fun LiquidPhysicsTuningDialog(
                         colors = ButtonDefaults.filledTonalButtonColors(
                             containerColor = if (selectedTab == TuningTab.Physics) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
                         ),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            text = "动力学参数 (Physics & Gestures)",
-                            fontSize = 12.sp,
+                            text = if (isMobile) "动力学" else "动力学 (Physics)",
+                            fontSize = if (isMobile) 11.sp else 12.sp,
                             fontWeight = if (selectedTab == TuningTab.Physics) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedTab == TuningTab.Physics) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    FilledTonalButton(
+                        onClick = {
+                            selectedTab = TuningTab.Dimensions
+                            activeParamId = "indicatorActiveHeightScale"
+                        },
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = if (selectedTab == TuningTab.Dimensions) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = if (isMobile) "尺寸倍率" else "尺寸倍率 (Dimensions)",
+                            fontSize = if (isMobile) 11.sp else 12.sp,
+                            fontWeight = if (selectedTab == TuningTab.Dimensions) FontWeight.Bold else FontWeight.Normal,
+                            color = if (selectedTab == TuningTab.Dimensions) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -527,11 +698,12 @@ fun LiquidPhysicsTuningDialog(
                         colors = ButtonDefaults.filledTonalButtonColors(
                             containerColor = if (selectedTab == TuningTab.Optics) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
                         ),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            text = "光学折射参数 (Optics & Refraction)",
-                            fontSize = 12.sp,
+                            text = if (isMobile) "光学折射" else "光学折射 (Optics)",
+                            fontSize = if (isMobile) 11.sp else 12.sp,
                             fontWeight = if (selectedTab == TuningTab.Optics) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedTab == TuningTab.Optics) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -693,10 +865,10 @@ fun LiquidPhysicsTuningDialog(
                         ParamSliderItem(
                             id = "dockingInertiaFactor",
                             name = "dockingInertiaFactor",
-                            label = "槽位惯性冲量倍率 (动态偏转幅度放大)",
+                            label = "槽位惯性定值偏转倍率 (严格定值，与飞行距离时长无关)",
                             value = currentPhysics.dockingInertiaFactor,
                             valueRange = 0.0f..2.0f,
-                            format = { "${((it * 100).roundToInt() / 100f)}x" },
+                            format = { "${((it * 100).roundToInt() / 100f)}x (${(0.12f * it * 100).roundToInt()}% 槽宽)" },
                             recommendation = "0.8f ~ 1.3f (默认 1.0f)",
                             isActive = activeParamId == "dockingInertiaFactor",
                             onHover = { activeParamId = "dockingInertiaFactor" },
@@ -832,6 +1004,137 @@ fun LiquidPhysicsTuningDialog(
                             onHover = { activeParamId = "dragStiffness" },
                             onValueChange = {
                                 onPhysicsChange(currentPhysics.copy(dragStiffness = it))
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Group 4: 边界超界拉伸与底座形变
+                        CategoryHeader("4. 边界超界拉伸与底座形变 (Overhang & Platter Scale)")
+
+                        ParamSliderItem(
+                            id = "maxOverhang",
+                            name = "maxOverhang",
+                            label = "X 轴拖拽最大超界距离 (水滴拉出两端最大允许位移)",
+                            value = currentPhysics.maxOverhang.value,
+                            valueRange = 0f..120f,
+                            format = { "${it.roundToInt()} dp" },
+                            recommendation = "20.dp ~ 60.dp (默认 38.dp)",
+                            isActive = activeParamId == "maxOverhang",
+                            onHover = { activeParamId = "maxOverhang" },
+                            onValueChange = {
+                                onPhysicsChange(currentPhysics.copy(maxOverhang = it.dp))
+                            }
+                        )
+
+                        ParamSliderItem(
+                            id = "platterActiveScaleX",
+                            name = "platterActiveScaleX",
+                            label = "底座按下横向缩放倍率 (X 轴膨胀挤压)",
+                            value = currentPhysics.platterActiveScaleX,
+                            valueRange = 0.95f..1.15f,
+                            format = { "${((it * 1000).roundToInt() / 1000f)}x" },
+                            recommendation = "1.01f ~ 1.06f (默认 1.03f)",
+                            isActive = activeParamId == "platterActiveScaleX",
+                            onHover = { activeParamId = "platterActiveScaleX" },
+                            onValueChange = {
+                                onPhysicsChange(currentPhysics.copy(platterActiveScaleX = it))
+                            }
+                        )
+
+                        ParamSliderItem(
+                            id = "platterActiveScaleY",
+                            name = "platterActiveScaleY",
+                            label = "底座按下纵向缩放倍率 (Y 轴膨胀挤压)",
+                            value = currentPhysics.platterActiveScaleY,
+                            valueRange = 0.95f..1.15f,
+                            format = { "${((it * 1000).roundToInt() / 1000f)}x" },
+                            recommendation = "1.01f ~ 1.06f (默认 1.03f)",
+                            isActive = activeParamId == "platterActiveScaleY",
+                            onHover = { activeParamId = "platterActiveScaleY" },
+                            onValueChange = {
+                                onPhysicsChange(currentPhysics.copy(platterActiveScaleY = it))
+                            }
+                        )
+                    } else if (selectedTab == TuningTab.Dimensions) {
+                        CategoryHeader("1. 水滴与底座几何倍率 (Scales & Geometry)")
+
+                        ParamSliderItem(
+                            id = "indicatorActiveHeightScale",
+                            name = "indicatorActiveHeightScale",
+                            label = "激活态水滴高度倍率 (相对普通态 50.dp 的高度倍数)",
+                            value = currentDimensions.indicatorActiveHeightScale,
+                            valueRange = 1.0f..2.0f,
+                            format = { "${((it * 100).roundToInt() / 100f)}x (${(currentDimensions.indicatorIdleHeight * it).value.roundToInt()}dp)" },
+                            recommendation = "1.25x ~ 1.60x (默认 1.44x，对应 72.dp)",
+                            isActive = activeParamId == "indicatorActiveHeightScale",
+                            onHover = { activeParamId = "indicatorActiveHeightScale" },
+                            onValueChange = {
+                                onDimensionsChange(currentDimensions.copy(indicatorActiveHeightScale = it))
+                            }
+                        )
+
+                        ParamSliderItem(
+                            id = "indicatorActiveWidthScale",
+                            name = "indicatorActiveWidthScale",
+                            label = "激活态水滴宽度倍率 (相对单 Tab 宽度的倍数)",
+                            value = currentDimensions.indicatorActiveWidthScale,
+                            valueRange = 0.60f..1.80f,
+                            format = { "${((it * 100).roundToInt() / 100f)}x" },
+                            recommendation = "0.85x ~ 1.25x (默认 1.00x)",
+                            isActive = activeParamId == "indicatorActiveWidthScale",
+                            onHover = { activeParamId = "indicatorActiveWidthScale" },
+                            onValueChange = {
+                                onDimensionsChange(currentDimensions.copy(indicatorActiveWidthScale = it))
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        CategoryHeader("2. 容器与底座基础尺寸 (Base Dimensions)")
+
+                        ParamSliderItem(
+                            id = "indicatorIdleHeight",
+                            name = "indicatorIdleHeight",
+                            label = "普通态水滴槽位高度 (静止基准高度)",
+                            value = currentDimensions.indicatorIdleHeight.value,
+                            valueRange = 36f..64f,
+                            format = { "${it.roundToInt()} dp" },
+                            recommendation = "44.dp ~ 56.dp (默认 50.dp)",
+                            isActive = activeParamId == "indicatorIdleHeight",
+                            onHover = { activeParamId = "indicatorIdleHeight" },
+                            onValueChange = {
+                                onDimensionsChange(currentDimensions.copy(indicatorIdleHeight = it.dp))
+                            }
+                        )
+
+                        ParamSliderItem(
+                            id = "platterHeight",
+                            name = "platterHeight",
+                            label = "底盘静态高度 (Navbar 实体背景高度)",
+                            value = currentDimensions.platterHeight.value,
+                            valueRange = 44f..80f,
+                            format = { "${it.roundToInt()} dp" },
+                            recommendation = "52.dp ~ 64.dp (默认 58.dp)",
+                            isActive = activeParamId == "platterHeight",
+                            onHover = { activeParamId = "platterHeight" },
+                            onValueChange = {
+                                onDimensionsChange(currentDimensions.copy(platterHeight = it.dp))
+                            }
+                        )
+
+                        ParamSliderItem(
+                            id = "containerHeight",
+                            name = "containerHeight",
+                            label = "外部容器总高度 (承载超界水滴的安全区域)",
+                            value = currentDimensions.containerHeight.value,
+                            valueRange = 64f..120f,
+                            format = { "${it.roundToInt()} dp" },
+                            recommendation = "78.dp ~ 96.dp (默认 84.dp)",
+                            isActive = activeParamId == "containerHeight",
+                            onHover = { activeParamId = "containerHeight" },
+                            onValueChange = {
+                                onDimensionsChange(currentDimensions.copy(containerHeight = it.dp))
                             }
                         )
                     } else {

@@ -31,7 +31,9 @@ class DampedDragAnimation(
     val valueRange: ClosedRange<Float>,
     val visibilityThreshold: Float,
     val initialScale: Float,
-    val pressedScale: Float,
+    val pressedScale: Float = 1.03f,
+    val pressedScaleX: Float = pressedScale,
+    val pressedScaleY: Float = pressedScale,
     initialPhysics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics(),
     val onDragStarted: DampedDragAnimation.(position: Offset) -> Unit = {},
     val onDragStopped: DampedDragAnimation.() -> Unit = {},
@@ -43,8 +45,8 @@ class DampedDragAnimation(
         get() = spring(physics.dragDampingRatio, physics.dragStiffness, visibilityThreshold)
     private val dockingAnimationSpec
         get() = spring(physics.dockingDampingRatio, physics.dockingStiffness, visibilityThreshold)
-    private val velocityAnimationSpec =
-        spring(0.65f, 380f, visibilityThreshold * 10f)
+    private val velocityAnimationSpec: SpringSpec<Float>
+        get() = spring(physics.dragDampingRatio, physics.dragStiffness * 1.5f, visibilityThreshold * 10f)
     private val growProgressAnimationSpec: SpringSpec<Float>
         get() = spring(physics.growDampingRatio, physics.growStiffness, 0.001f)
     private val shrinkProgressAnimationSpec: SpringSpec<Float>
@@ -53,15 +55,19 @@ class DampedDragAnimation(
             val damping = physics.shrinkDampingRatio * (1.15f - 0.50f * elasticity)
             val stiffness = physics.shrinkStiffness * (1.50f - 0.70f * elasticity)
             return spring(
-                dampingRatio = damping.coerceIn(0.42f, 1.0f),
-                stiffness = stiffness.coerceIn(150f, 850f),
+                dampingRatio = damping.coerceIn(0.35f, 1.0f),
+                stiffness = stiffness.coerceIn(100f, 850f),
                 visibilityThreshold = 0.001f
             )
         }
-    private val scaleXAnimationSpec =
-        spring(0.65f, 280f, 0.001f)
-    private val scaleYAnimationSpec =
-        spring(0.70f, 280f, 0.001f)
+    private val scaleXGrowSpec: SpringSpec<Float>
+        get() = spring(physics.growDampingRatio, physics.growStiffness * 0.9f, 0.001f)
+    private val scaleYGrowSpec: SpringSpec<Float>
+        get() = spring(physics.growDampingRatio, physics.growStiffness * 0.9f, 0.001f)
+    private val scaleXShrinkSpec: SpringSpec<Float>
+        get() = spring(physics.shrinkDampingRatio, physics.shrinkStiffness, 0.001f)
+    private val scaleYShrinkSpec: SpringSpec<Float>
+        get() = spring(physics.shrinkDampingRatio, physics.shrinkStiffness, 0.001f)
 
     private val valueAnimation =
         Animatable(initialValue, visibilityThreshold)
@@ -137,10 +143,10 @@ class DampedDragAnimation(
                 pressProgressAnimation.animateTo(1f, growProgressAnimationSpec)
             }
             launch {
-                scaleXAnimation.animateTo(pressedScale, scaleXAnimationSpec)
+                scaleXAnimation.animateTo(physics.platterActiveScaleX, scaleXGrowSpec)
             }
             launch {
-                scaleYAnimation.animateTo(pressedScale, scaleYAnimationSpec)
+                scaleYAnimation.animateTo(physics.platterActiveScaleY, scaleYGrowSpec)
             }
         }
     }
@@ -224,8 +230,8 @@ class DampedDragAnimation(
         snapJob = animationScope.launch {
             try {
                 coroutineScope {
-                    launch { scaleXAnimation.animateTo(initialScale, scaleXAnimationSpec) }
-                    launch { scaleYAnimation.animateTo(initialScale, scaleYAnimationSpec) }
+                    launch { scaleXAnimation.animateTo(initialScale, scaleXShrinkSpec) }
+                    launch { scaleYAnimation.animateTo(initialScale, scaleYShrinkSpec) }
                     launch { velocityAnimation.animateTo(0f, velocityAnimationSpec) }
 
                     launch {
@@ -242,24 +248,43 @@ class DampedDragAnimation(
                     }
 
                     launch {
-                        val trackerVel = velocityTracker.calculateVelocity().x
-                        val rangeSpan = (valueRange.endInclusive - valueRange.start).coerceAtLeast(0.001f)
-                        val normalizedTrackerVel = trackerVel / rangeSpan
-                        // 优先继承拖拽物理仿真时的瞬时速度，确保反向或甩动时拥有最真实的水滴惯性
-                        val releaseVel = if (abs(currentSimVelocity) > 0.01f) {
-                            currentSimVelocity
-                        } else if (normalizedTrackerVel.isFinite() && abs(normalizedTrackerVel) > 0.01f) {
-                            normalizedTrackerVel
-                        } else {
-                            valueAnimation.velocity
+                        val currentPos = valueAnimation.value
+                        val dist = target - currentPos
+                        val dir = when {
+                            abs(dist) > 0.02f -> kotlin.math.sign(dist)
+                            abs(currentSimVelocity) > 0.02f -> kotlin.math.sign(currentSimVelocity)
+                            else -> 0f
                         }
-                        val initialVel = releaseVel * physics.dockingInertiaFactor
+                        // 定值过冲偏转：无论飞行距离是 0.2 个 Tab 还是 4 个 Tab，过冲幅度严格为定值，杜绝随距离无限放大
+                        val fixedOvershoot = dir * (0.12f * physics.dockingInertiaFactor)
 
-                        valueAnimation.animateTo(
-                            targetValue = target,
-                            animationSpec = dockingAnimationSpec,
-                            initialVelocity = initialVel
-                        )
+                        if (abs(dir) > 0f && abs(fixedOvershoot) > 0.005f) {
+                            val peakTarget = target + fixedOvershoot
+                            // 阶段 1：平滑飞向目标吸附点峰值（使用单调临界阻尼 1.0f，绝不产生与距离成正比的多余过冲）
+                            valueAnimation.animateTo(
+                                targetValue = peakTarget,
+                                animationSpec = spring(
+                                    dampingRatio = 1.0f,
+                                    stiffness = physics.dockingStiffness.coerceAtLeast(360f)
+                                )
+                            )
+                            // 阶段 2：以定值冲量从峰值回弹归正到目标槽位（回弹幅度严格为定值，与飞行距离和时长无关）
+                            valueAnimation.animateTo(
+                                targetValue = target,
+                                animationSpec = spring(
+                                    dampingRatio = physics.dockingDampingRatio,
+                                    stiffness = physics.dockingStiffness
+                                )
+                            )
+                        } else {
+                            valueAnimation.animateTo(
+                                targetValue = target,
+                                animationSpec = spring(
+                                    dampingRatio = physics.dockingDampingRatio,
+                                    stiffness = physics.dockingStiffness
+                                )
+                            )
+                        }
                     }
                 }
             } finally {

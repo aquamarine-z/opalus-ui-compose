@@ -48,6 +48,7 @@ fun <T> LiquidTabBar(
     ) {
         val density = LocalDensity.current
         val padHorizontalPx = with(density) { dimensions.horizontalPadding.toPx() }
+        val maxOverhangPx = with(density) { physics.maxOverhang.toPx() }
         val tabWidth = with(density) {
             (constraints.maxWidth.toFloat() - padHorizontalPx * 2f) / items.size
         }
@@ -64,7 +65,7 @@ fun <T> LiquidTabBar(
                         scaleX = state.scaleX
                         scaleY = state.scaleY
                     }
-                    .pointerInput(tabWidth, items.size, isLtr, state) {
+                    .pointerInput(tabWidth, items.size, isLtr, state, maxOverhangPx) {
                         if (tabWidth <= 0f) return@pointerInput
                         val totalW = constraints.maxWidth.toFloat()
 
@@ -76,7 +77,7 @@ fun <T> LiquidTabBar(
                             var lastX = downX
 
                             // 1. 按下瞬间：水滴立即激活，水滴几何中心立刻精准对齐鼠标 X 坐标
-                            state.onPointerDown(downX, totalW, tabWidth, padHorizontalPx, isLtr)
+                            state.onPointerDown(downX, totalW, tabWidth, padHorizontalPx, isLtr, maxOverhangPx)
 
                             try {
                                 while (true) {
@@ -90,7 +91,7 @@ fun <T> LiquidTabBar(
                                     lastX = currentX
 
                                     // 2. 持续追踪：水滴几何中心跟随光标，左右边缘允许带弹性限度拉出
-                                    state.onPointerMove(currentX, totalW, tabWidth, padHorizontalPx, isLtr)
+                                    state.onPointerMove(currentX, totalW, tabWidth, padHorizontalPx, isLtr, maxOverhangPx)
                                 }
                             } finally {
                                 // 3. 鼠标松开或手势中断：依据手指/鼠标光标最后停留的区域决定目标槽位并触发回调，保证吸附

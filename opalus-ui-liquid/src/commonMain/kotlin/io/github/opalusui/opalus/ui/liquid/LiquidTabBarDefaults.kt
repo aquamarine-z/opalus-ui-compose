@@ -27,11 +27,15 @@ data class LiquidTabBarDimensions(
     val containerHeight: Dp = 84.dp,
     val platterHeight: Dp = 58.dp,
     val indicatorIdleHeight: Dp = 50.dp,
-    val indicatorActiveHeight: Dp = 72.dp,
+    val indicatorActiveHeightScale: Float = 1.44f,
+    val indicatorActiveWidthScale: Float = 1.0f,
     val horizontalPadding: Dp = 4.dp,
     val borderWidth: Dp = 0.6.dp,
     val indicatorBorderWidth: Dp = 0.4.dp
-)
+) {
+    val indicatorActiveHeight: Dp
+        get() = indicatorIdleHeight * indicatorActiveHeightScale
+}
 
 /**
  * iOS HIG 规范：流体导航栏光学折射与透镜效果设计令牌 (LiquidTabBarOptics)
@@ -62,40 +66,44 @@ data class LiquidTabBarOptics(
  */
 @Immutable
 data class LiquidTabBarPhysics(
-    val maxOverhang: Float = 0.38f,
-    val overhangResistance: Float = 1.5f,
-    val platterActiveScale: Float = 1.03f,
+    val maxOverhang: Dp = 38.dp,
+    val overhangResistance: Float = 1.8f,
+    val platterActiveScaleX: Float = 1.03f,
+    val platterActiveScaleY: Float = 1.03f,
     val itemActiveScale: Float = 1.05f,
     val activeItemScale: Float = 1.15f,
     val indicatorActiveScale: Float = 1.05f,
-    val velocityHorizontalFactor: Float = 0.75f,
-    val velocityVerticalFactor: Float = 0.25f,
-    val maxVelocityCoerce: Float = 0.2f,
+    val velocityHorizontalFactor: Float = 1.35f,
+    val velocityVerticalFactor: Float = 0.38f,
+    val maxVelocityCoerce: Float = 0.36f,
     val dragVisibilityThreshold: Float = 0.001f,
 
-    // 水滴位移物理参数：拖拽流动阻尼与跟手刚度 (0.58f 欠阻尼带来拉动流动滞后与追赶弹性；260f 刚度呈现真实水珠质感)
-    val dragDampingRatio: Float = 0.58f,
-    val dragStiffness: Float = 260f,
+    // 水滴位移物理参数：拖拽流动阻尼与跟手刚度 (0.45f 欠阻尼带来拉动流动滞后与更强烈的追赶摇晃弹性；190f 刚度呈现像橡皮筋拉动水珠般的液滴拖拽阻尼感)
+    val dragDampingRatio: Float = 0.45f,
+    val dragStiffness: Float = 190f,
 
-    // 槽位吸附惯性参数：0.62f 欠阻尼赋予进入 item 时自然的惯性冲量（左入偏右、右入偏左）
-    val dockingDampingRatio: Float = 0.62f,
-    val dockingStiffness: Float = 600f,
-    val dockingInertiaFactor: Float = 1.0f,
+    // 槽位吸附惯性参数：0.50f 欠阻尼赋予进入 item 时自然的惯性冲量与摇晃回弹
+    val dockingDampingRatio: Float = 0.50f,
+    val dockingStiffness: Float = 480f,
+    val dockingInertiaFactor: Float = 1.25f,
 
-    // 水滴按下变大速度与弹性：1350f 刚度迅速成型，0.68f 阻尼比呈现水珠饱满弹动
-    val growDampingRatio: Float = 0.68f,
-    val growStiffness: Float = 1350f,
+    // 水滴按下变大速度与弹性：2400f 刚度瞬时爆发成型张开，0.64f 阻尼比呈现水珠饱满微弹
+    val growDampingRatio: Float = 0.64f,
+    val growStiffness: Float = 2400f,
 
-    // 水滴吸附变小速度与弹性：420f 刚度柔和收拢，0.65f 阻尼比带来果冻回弹缩小质感
-    val shrinkDampingRatio: Float = 0.65f,
-    val shrinkStiffness: Float = 420f,
+    // 水滴吸附变小速度与弹性：180f 刚度悠闲柔润收缩，0.46f 阻尼比带来充分的果冻回弹缩小质感
+    val shrinkDampingRatio: Float = 0.46f,
+    val shrinkStiffness: Float = 180f,
 
     // 水滴果冻回弹弹性程度：控制水珠松开后从当前尺寸收拢回到 inactive 静态所需的时间与过程中的物理弹性
-    val dropletElasticity: Float = 0.45f,
+    val dropletElasticity: Float = 0.85f,
 
     // 吸附 item 时开始变小的距离阈值 (以 Tab 槽位跨度归一化单位计)
     val dockingShrinkThreshold: Float = 0.35f
-)
+) {
+    val platterActiveScale: Float
+        get() = (platterActiveScaleX + platterActiveScaleY) / 2f
+}
 
 /**
  * iOS HIG 规范：流体导航栏默认配置工厂 (LiquidTabBarDefaults)
@@ -131,7 +139,8 @@ object LiquidTabBarDefaults {
         containerHeight: Dp = 84.dp,
         platterHeight: Dp = 58.dp,
         indicatorIdleHeight: Dp = 50.dp,
-        indicatorActiveHeight: Dp = 72.dp,
+        indicatorActiveHeightScale: Float = 1.44f,
+        indicatorActiveWidthScale: Float = 1.0f,
         horizontalPadding: Dp = 4.dp,
         borderWidth: Dp = 0.6.dp,
         indicatorBorderWidth: Dp = 0.4.dp
@@ -139,7 +148,8 @@ object LiquidTabBarDefaults {
         containerHeight = containerHeight,
         platterHeight = platterHeight,
         indicatorIdleHeight = indicatorIdleHeight,
-        indicatorActiveHeight = indicatorActiveHeight,
+        indicatorActiveHeightScale = indicatorActiveHeightScale,
+        indicatorActiveWidthScale = indicatorActiveWidthScale,
         horizontalPadding = horizontalPadding,
         borderWidth = borderWidth,
         indicatorBorderWidth = indicatorBorderWidth
@@ -185,31 +195,33 @@ object LiquidTabBarDefaults {
      * 动力学物理与手势默认工厂
      */
     fun physics(
-        maxOverhang: Float = 0.38f,
-        overhangResistance: Float = 1.5f,
-        platterActiveScale: Float = 1.03f,
+        maxOverhang: Dp = 38.dp,
+        overhangResistance: Float = 1.8f,
+        platterActiveScaleX: Float = 1.03f,
+        platterActiveScaleY: Float = 1.03f,
         itemActiveScale: Float = 1.05f,
         activeItemScale: Float = 1.15f,
         indicatorActiveScale: Float = 1.05f,
-        velocityHorizontalFactor: Float = 0.75f,
-        velocityVerticalFactor: Float = 0.25f,
-        maxVelocityCoerce: Float = 0.2f,
+        velocityHorizontalFactor: Float = 1.35f,
+        velocityVerticalFactor: Float = 0.38f,
+        maxVelocityCoerce: Float = 0.36f,
         dragVisibilityThreshold: Float = 0.001f,
-        dragDampingRatio: Float = 0.58f,
-        dragStiffness: Float = 260f,
-        dockingDampingRatio: Float = 0.62f,
-        dockingStiffness: Float = 600f,
-        dockingInertiaFactor: Float = 1.0f,
-        growDampingRatio: Float = 0.68f,
-        growStiffness: Float = 1350f,
-        shrinkDampingRatio: Float = 0.65f,
-        shrinkStiffness: Float = 420f,
-        dropletElasticity: Float = 0.45f,
+        dragDampingRatio: Float = 0.45f,
+        dragStiffness: Float = 190f,
+        dockingDampingRatio: Float = 0.50f,
+        dockingStiffness: Float = 480f,
+        dockingInertiaFactor: Float = 1.25f,
+        growDampingRatio: Float = 0.64f,
+        growStiffness: Float = 2400f,
+        shrinkDampingRatio: Float = 0.46f,
+        shrinkStiffness: Float = 180f,
+        dropletElasticity: Float = 0.85f,
         dockingShrinkThreshold: Float = 0.35f
     ): LiquidTabBarPhysics = LiquidTabBarPhysics(
         maxOverhang = maxOverhang,
         overhangResistance = overhangResistance,
-        platterActiveScale = platterActiveScale,
+        platterActiveScaleX = platterActiveScaleX,
+        platterActiveScaleY = platterActiveScaleY,
         itemActiveScale = itemActiveScale,
         activeItemScale = activeItemScale,
         indicatorActiveScale = indicatorActiveScale,
