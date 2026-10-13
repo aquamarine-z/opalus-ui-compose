@@ -15,7 +15,7 @@ junit = "4.13.2"
 kotlin = "2.4.20"
 kotlinx-coroutines = "1.10.2"
 materialIconsExtended = "1.7.8"
-opalusUi = "0.2.4"
+opalusUi = "0.2.5"
 kyant-backdrop = "2.0.1"
 kyant-shapes = "1.2.1"
 

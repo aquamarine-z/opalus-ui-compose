@@ -699,7 +699,7 @@ val customOptics = LiquidTabBarDefaults.optics(
     val indicatorShadowAlpha: Float = 0.45f,
     val indicatorInnerShadowRadius: Dp = 4.dp,
     val indicatorInnerShadowAlpha: Float = 0.28f,
-    val chromaticAberration: Boolean = true
+    val chromaticAberration: Boolean = false
 )""",
             description = "Configures SkSL hardware-accelerated shader properties. Controls background Gaussian blur, 3D convex lens meniscus curvature, specular rim light, and RGB chromatic aberration wavelength dispersion.",
             parameters = listOf(
@@ -712,7 +712,7 @@ val customOptics = LiquidTabBarDefaults.optics(
                 ParamItem("indicatorHighlightAlpha", "Float", "0.16f / 0.10f", "Specular edge highlight intensity on the droplet."),
                 ParamItem("indicatorShadowRadius / Offset", "Dp", "8.dp / 2.5.dp", "Drop shadow radius and Y offset casting underneath the droplet."),
                 ParamItem("indicatorInnerShadowRadius", "Dp", "4.dp", "Inner shadow radius creating 3D volume depth."),
-                ParamItem("chromaticAberration", "Boolean", "true", "Enables optical dispersion splitting RGB channels at lens edges.")
+                ParamItem("chromaticAberration", "Boolean", "false", "Enables optical dispersion splitting RGB channels at lens edges.")
             ),
             codeExample = """val highContrastOptics = LiquidTabBarDefaults.optics(
     chromaticAberration = true,

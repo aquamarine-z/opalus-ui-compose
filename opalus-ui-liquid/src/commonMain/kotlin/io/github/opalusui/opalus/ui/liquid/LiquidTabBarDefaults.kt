@@ -58,7 +58,7 @@ data class LiquidTabBarOptics(
     val indicatorShadowAlpha: Float = 0.45f,
     val indicatorInnerShadowRadius: Dp = 4.dp,
     val indicatorInnerShadowAlpha: Float = 0.28f,
-    val chromaticAberration: Boolean = true
+    val chromaticAberration: Boolean = false
 )
 
 /**
@@ -177,7 +177,7 @@ object LiquidTabBarDefaults {
         indicatorShadowAlpha: Float = if (!isDark) 0.45f else 0.55f,
         indicatorInnerShadowRadius: Dp = 4.dp,
         indicatorInnerShadowAlpha: Float = 0.28f,
-        chromaticAberration: Boolean = true
+        chromaticAberration: Boolean = false
     ): LiquidTabBarOptics = LiquidTabBarOptics(
         platterBlur = platterBlur,
         platterRefractionHeight = platterRefractionHeight,

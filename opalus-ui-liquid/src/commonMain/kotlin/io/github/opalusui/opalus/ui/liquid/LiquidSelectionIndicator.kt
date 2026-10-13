@@ -44,12 +44,6 @@ internal fun LiquidSelectionIndicator(
     val rawProgress = state.pressProgress
     val visualProgress = rawProgress.coerceIn(0f, 1f)
     val elasticProgress = rawProgress.coerceIn(-0.45f, 1f)
-    val currentIndicatorHeight = lerp(
-        dimensions.indicatorIdleHeight,
-        dimensions.indicatorActiveHeight,
-        elasticProgress.coerceIn(0f, 1f)
-    )
-
     val indicatorModifier = modifier
         .padding(horizontal = dimensions.horizontalPadding)
         .graphicsLayer {
@@ -57,7 +51,7 @@ internal fun LiquidSelectionIndicator(
                 if (isLtr) state.animatedValue * tabWidth
                 else size.width - (state.animatedValue + 1f) * tabWidth
         }
-        .height(currentIndicatorHeight)
+        .height(dimensions.indicatorIdleHeight)
         .fillMaxWidth(1f / tabsCount)
 
     Box(
@@ -66,20 +60,16 @@ internal fun LiquidSelectionIndicator(
                 backdrop = rememberCombinedBackdrop(backdrop, dockBackdrop, activeButtonsBackdrop),
                 shape = { Capsule() },
                 effects = {
-                    // A zero-strength lens still changes backdrop sampling on
-                    // WASM. Keep the inactive indicator as a plain glass fill.
-                    if (visualProgress > 0.001f) {
-                        lens(
-                            refractionHeight = lerp(
-                                optics.indicatorRefractionHeightMin.toPx(),
-                                optics.indicatorRefractionHeightMax.toPx(),
-                                visualProgress
-                            ),
-                            refractionAmount = optics.indicatorRefractionAmount.toPx() * visualProgress,
-                            depthEffect = true,
-                            chromaticAberration = optics.chromaticAberration
-                        )
-                    }
+                    lens(
+                        refractionHeight = lerp(
+                            optics.indicatorRefractionHeightMin.toPx(),
+                            optics.indicatorRefractionHeightMax.toPx(),
+                            visualProgress
+                        ),
+                        refractionAmount = optics.indicatorRefractionAmount.toPx() * visualProgress,
+                        depthEffect = true,
+                        chromaticAberration = optics.chromaticAberration
+                    )
                 },
                 highlight = {
                     val visualProgress = state.pressProgress.coerceIn(0f, 1f)
@@ -105,8 +95,13 @@ internal fun LiquidSelectionIndicator(
                 layerBlock = {
                     val scale = lerp(1f, physics.indicatorActiveScale, visualProgress)
                     val widthScale = lerp(1f, dimensions.indicatorActiveWidthScale, visualProgress)
+                    val heightScale = lerp(
+                        1f,
+                        dimensions.indicatorActiveHeightScale,
+                        elasticProgress.coerceIn(0f, 1f)
+                    )
                     var sX = scale * widthScale
-                    var sY = scale
+                    var sY = scale * heightScale
 
                     // 触底微弹处理：当 elasticProgress < 0f 时，水滴触底微压扁回弹（严格不向外过量膨胀）
                     if (elasticProgress < 0f) {

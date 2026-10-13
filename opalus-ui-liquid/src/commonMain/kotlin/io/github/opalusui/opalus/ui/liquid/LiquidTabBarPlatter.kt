@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -84,6 +85,7 @@ internal fun <T> LiquidTabBarPlatter(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 反向几何遮罩：在水滴物理覆盖区域内，底层不绘制灰色按钮文字和图标，彻底杜绝重影
+        val dropletPath = remember { Path() }
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -130,18 +132,17 @@ internal fun <T> LiquidTabBarPlatter(
                     val top = centerY - halfHeight
                     val bottom = centerY + halfHeight
 
-                    val dropletPath = Path().apply {
-                        addRoundRect(
-                            RoundRect(
-                                left = left,
-                                top = top,
-                                right = right,
-                                bottom = bottom,
-                                radiusX = halfHeight,
-                                radiusY = halfHeight
-                            )
+                    dropletPath.reset()
+                    dropletPath.addRoundRect(
+                        RoundRect(
+                            left = left,
+                            top = top,
+                            right = right,
+                            bottom = bottom,
+                            radiusX = halfHeight,
+                            radiusY = halfHeight
                         )
-                    }
+                    )
 
                     clipPath(dropletPath, clipOp = ClipOp.Difference) {
                         this@drawWithContent.drawContent()

@@ -133,17 +133,6 @@ class DampedDragAnimation(
         val token = ++animationToken
         pressJob = animationScope.launch {
             launch {
-                jellyAnimation.snapTo(-0.30f)
-                jellyAnimation.animateTo(
-                    targetValue = 0f,
-                    animationSpec = spring(
-                        dampingRatio = physics.growDampingRatio,
-                        stiffness = physics.growStiffness * 0.8f,
-                        visibilityThreshold = 0.001f
-                    )
-                )
-            }
-            launch {
                 pressProgressAnimation.animateTo(1f, growProgressAnimationSpec)
             }
             launch {
