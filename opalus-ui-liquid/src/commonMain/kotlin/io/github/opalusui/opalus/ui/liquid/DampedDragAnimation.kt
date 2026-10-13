@@ -171,7 +171,7 @@ class DampedDragAnimation(
             var lastFrameTimeNanos = 0L
             var currentPos = valueAnimation.value
 
-            while (isActive && isDragging) {
+            simulation@ while (isActive && isDragging) {
                 val nowNanos = withFrameNanos { it }
                 if (lastFrameTimeNanos == 0L) {
                     lastFrameTimeNanos = nowNanos
@@ -242,8 +242,10 @@ class DampedDragAnimation(
                     currentSimVelocity = 0f
                     valueAnimation.snapTo(target)
                     velocityAnimation.snapTo(0f)
-                    lastFrameTimeNanos = 0L
-                    break
+                    // Stop scheduling frames while a stationary pointer keeps the
+                    // same target. A later pointer move starts the simulation again.
+                    isDragging = false
+                    break@simulation
                 }
             }
         }

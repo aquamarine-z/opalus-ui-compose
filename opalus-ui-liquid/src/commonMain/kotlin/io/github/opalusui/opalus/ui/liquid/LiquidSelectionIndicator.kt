@@ -44,42 +44,51 @@ internal fun LiquidSelectionIndicator(
     val rawProgress = state.pressProgress
     val visualProgress = rawProgress.coerceIn(0f, 1f)
     val elasticProgress = rawProgress.coerceIn(-0.45f, 1f)
-
     val currentIndicatorHeight = lerp(
         dimensions.indicatorIdleHeight,
         dimensions.indicatorActiveHeight,
         elasticProgress.coerceIn(0f, 1f)
     )
 
+    val indicatorModifier = modifier
+        .padding(horizontal = dimensions.horizontalPadding)
+        .graphicsLayer {
+            translationX =
+                if (isLtr) state.animatedValue * tabWidth
+                else size.width - (state.animatedValue + 1f) * tabWidth
+        }
+        .height(currentIndicatorHeight)
+        .fillMaxWidth(1f / tabsCount)
+
     Box(
-        modifier = modifier
-            .padding(horizontal = dimensions.horizontalPadding)
-            .graphicsLayer {
-                translationX =
-                    if (isLtr) state.animatedValue * tabWidth
-                    else size.width - (state.animatedValue + 1f) * tabWidth
-            }
+        modifier = indicatorModifier
             .drawBackdrop(
                 backdrop = rememberCombinedBackdrop(backdrop, dockBackdrop, activeButtonsBackdrop),
                 shape = { Capsule() },
                 effects = {
-                    lens(
-                        refractionHeight = lerp(
-                            optics.indicatorRefractionHeightMin.toPx(),
-                            optics.indicatorRefractionHeightMax.toPx(),
-                            visualProgress
-                        ),
-                        refractionAmount = optics.indicatorRefractionAmount.toPx() * visualProgress,
-                        depthEffect = true,
-                        chromaticAberration = optics.chromaticAberration
-                    )
+                    // A zero-strength lens still changes backdrop sampling on
+                    // WASM. Keep the inactive indicator as a plain glass fill.
+                    if (visualProgress > 0.001f) {
+                        lens(
+                            refractionHeight = lerp(
+                                optics.indicatorRefractionHeightMin.toPx(),
+                                optics.indicatorRefractionHeightMax.toPx(),
+                                visualProgress
+                            ),
+                            refractionAmount = optics.indicatorRefractionAmount.toPx() * visualProgress,
+                            depthEffect = true,
+                            chromaticAberration = optics.chromaticAberration
+                        )
+                    }
                 },
                 highlight = {
+                    val visualProgress = state.pressProgress.coerceIn(0f, 1f)
                     Highlight.Default.copy(
                         alpha = optics.indicatorHighlightAlpha * visualProgress
                     )
                 },
                 shadow = {
+                    val visualProgress = state.pressProgress.coerceIn(0f, 1f)
                     Shadow(
                         radius = optics.indicatorShadowRadius,
                         offset = DpOffset(0.dp, optics.indicatorShadowOffsetY * visualProgress),
@@ -87,6 +96,7 @@ internal fun LiquidSelectionIndicator(
                     )
                 },
                 innerShadow = {
+                    val visualProgress = state.pressProgress.coerceIn(0f, 1f)
                     InnerShadow(
                         radius = optics.indicatorInnerShadowRadius * visualProgress,
                         alpha = optics.indicatorInnerShadowAlpha * visualProgress
@@ -132,11 +142,9 @@ internal fun LiquidSelectionIndicator(
             .border(
                 width = dimensions.indicatorBorderWidth,
                 color = colors.indicatorBorderColor.copy(
-                    alpha = colors.indicatorBorderColor.alpha * visualProgress
+                    alpha = colors.indicatorBorderColor.alpha * state.pressProgress.coerceIn(0f, 1f)
                 ),
                 shape = Capsule()
             )
-            .height(currentIndicatorHeight)
-            .fillMaxWidth(1f / tabsCount)
     )
 }

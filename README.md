@@ -13,7 +13,7 @@ We prepared the following components to provide a better experience for your pro
 ### Version Catalog (`gradle/libs.versions.toml`)
 ```toml
 [versions]
-opalusUi = "0.2.3"
+opalusUi = "0.2.4"
 
 [libraries]
 opalus-ui-core = { module = "io.github.opalusui:opalus-ui-core", version.ref = "opalusUi" }
@@ -34,6 +34,6 @@ kotlin {
 
 Or direct dependency coordinates:
 ```kotlin
-implementation("io.github.opalusui:opalus-ui-core:0.2.3")
-implementation("io.github.opalusui:opalus-ui-liquid:0.2.3")
+implementation("io.github.opalusui:opalus-ui-core:0.2.4")
+implementation("io.github.opalusui:opalus-ui-liquid:0.2.4")
 ```

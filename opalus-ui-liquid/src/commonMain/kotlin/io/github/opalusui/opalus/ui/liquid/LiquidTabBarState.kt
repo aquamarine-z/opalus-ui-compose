@@ -70,7 +70,10 @@ class LiquidTabBarState(
         val cushionSlots = (overhangCushionPx / tabWidth).coerceAtLeast(0f)
         val minBound = -maxOverhangSlots - cushionSlots
         val maxBound = (tabsCount - 1).toFloat() + maxOverhangSlots + cushionSlots
-        dampedAnimation.valueRange = minBound..maxBound
+        val currentRange = dampedAnimation.valueRange
+        if (currentRange.start != minBound || currentRange.endInclusive != maxBound) {
+            dampedAnimation.valueRange = minBound..maxBound
+        }
     }
 
     val animatedValue: Float

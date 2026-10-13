@@ -185,7 +185,7 @@ fun DialogsDemoPage() {
                                     scope.launch {
                                         val res = controller.dialogs.alert(
                                             title = "System Notification",
-                                            message = "Build artifact 'opalus-ui-liquid:0.2.3' compiled with Compose Multiplatform 1.12.1.",
+                                            message = "Build artifact 'opalus-ui-liquid:0.2.4' compiled with Compose Multiplatform 1.12.1.",
                                             okText = "Acknowledge"
                                         )
                                         logResult("Alert finished: user acknowledged ($res)")
@@ -261,7 +261,7 @@ fun DialogsDemoPage() {
                                     scope.launch {
                                         val res = controller.dialogs.alert(
                                             title = "System Notification",
-                                            message = "Build artifact 'opalus-ui-liquid:0.2.3' compiled with Compose Multiplatform 1.12.1.",
+                                            message = "Build artifact 'opalus-ui-liquid:0.2.4' compiled with Compose Multiplatform 1.12.1.",
                                             okText = "Acknowledge"
                                         )
                                         logResult("Alert finished: user acknowledged ($res)")

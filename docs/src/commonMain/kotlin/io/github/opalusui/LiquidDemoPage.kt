@@ -28,6 +28,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,7 +58,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
 
     var selectedTab2 by remember { mutableStateOf(0) }
     val tabs2 = remember { listOf("Dashboard", "Analytics", "Settings") }
-    var eventLog by remember { mutableStateOf("Ready (Idle)") }
+    val eventLogState = remember { mutableStateOf("Ready (Idle)") }
 
     var physics by remember { mutableStateOf(LiquidTabBarDefaults.physics()) }
     var optics by remember {
@@ -388,31 +389,31 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                             events = remember {
                                 LiquidTabBarEvents(
                                     onDropletActivated = { index ->
-                                        eventLog = "onDropletActivated(index = $index)"
+                                        eventLogState.value = "onDropletActivated(index = $index)"
                                     },
                                     onDropletDeactivated = { finalIndex ->
-                                        eventLog = "onDropletDeactivated(finalIndex = $finalIndex)"
+                                        eventLogState.value = "onDropletDeactivated(finalIndex = $finalIndex)"
                                     },
                                     onTabCrossed = { from, to ->
-                                        eventLog = "onTabCrossed(from = $from, to = $to)"
+                                        eventLogState.value = "onTabCrossed(from = $from, to = $to)"
                                     },
                                     onSlotHovered = { slot ->
-                                        eventLog = "onSlotHovered(slot = $slot)"
+                                        eventLogState.value = "onSlotHovered(slot = $slot)"
                                     },
                                     onBoundaryReached = { edge ->
-                                        eventLog = "onBoundaryReached(edge = $edge)"
+                                        eventLogState.value = "onBoundaryReached(edge = $edge)"
                                     },
                                     onMaxOverhangReached = { edge ->
-                                        eventLog = "onMaxOverhangReached(edge = $edge)"
+                                        eventLogState.value = "onMaxOverhangReached(edge = $edge)"
                                     },
                                     onBoundaryPull = { edge, ratio ->
-                                        eventLog = "onBoundaryPull(edge = $edge, ratio = ${((ratio * 100).toInt())}%)"
+                                        eventLogState.value = "onBoundaryPull(edge = $edge, ratio = ${((ratio * 100).toInt())}%)"
                                     },
                                     onDockingStarted = { target ->
-                                        eventLog = "onDockingStarted(target = $target)"
+                                        eventLogState.value = "onDockingStarted(target = $target)"
                                     },
                                     onDockingSettled = { settled ->
-                                        eventLog = "onDockingSettled(settled = $settled)"
+                                        eventLogState.value = "onDockingSettled(settled = $settled)"
                                     }
                                 )
                             },
@@ -456,12 +457,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    Text(
-                        text = "Live Event: $eventLog",
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    LiquidTabBarEventLog(eventLogState)
                 }
             }
         }
@@ -931,6 +927,16 @@ Box {
         )
     }
 }
+}
+
+@Composable
+private fun LiquidTabBarEventLog(eventLogState: State<String>) {
+    Text(
+        text = "Live Event: ${eventLogState.value}",
+        fontFamily = FontFamily.Monospace,
+        fontSize = 11.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 @Composable
