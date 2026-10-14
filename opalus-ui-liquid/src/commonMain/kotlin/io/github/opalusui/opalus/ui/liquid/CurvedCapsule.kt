@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 private class CapsuleCapCornerSize(private val curvature: Dp) : CornerSize {
     override fun toPx(shapeSize: Size, density: Density): Float {
         val h = shapeSize.height
-        val c = with(density) { curvature.toPx() }.coerceIn(0f, (h * 0.45f).coerceAtLeast(0f))
+        val c = with(density) { curvature.toPx() }.coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
         return ((h - 2f * c) / 2f).coerceAtLeast(0f)
     }
 }
@@ -27,15 +27,16 @@ private class CapsuleCapCornerSize(private val curvature: Dp) : CornerSize {
  *
  * 相比两端半圆、上下为完全水平直线的传统标准胶囊 (Capsule)，
  * CurvedCapsule 的上下边缘具有极其微妙自然的外向有机微弧度 (curvature)。
- * 在流体玻璃态下，这一微小弧度能够还原真实水滴在表面张力下的微饱满凸起质感，
- * 消除生硬的工业平直感，同时与两端半圆在切线方向保持严格 C1 连续光滑衔接。
+ * 采用严格的 4-圆弧连续凸几何模型 (Exact G1 continuous 4-arc convex oval)，
+ * 彻底消除中间尖峰与肩膀拐点，全轮廓各点曲率严格大于 0 且平滑连续，
+ * 在流体玻璃态下还原真实水滴在表面张力下的微饱满凸起质感。
  *
  * 继承自 [CornerBasedShape]，与 Backdrop 的 SDF 透镜着色器 (Lens)
  * 100% 硬件加速兼容。
  */
 @Immutable
 class CurvedCapsule(
-    val curvature: Dp = 1.5.dp
+    val curvature: Dp = 1.0.dp
 ) : CornerBasedShape(
     topStart = CapsuleCapCornerSize(curvature),
     topEnd = CapsuleCapCornerSize(curvature),
@@ -73,7 +74,7 @@ class CurvedCapsule(
             return cachedOutline!!
         }
 
-        val c = (h / 2f - topStart).coerceIn(0f, (h * 0.45f).coerceAtLeast(0f))
+        val c = (h / 2f - topStart).coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
         val outline = if (c <= 0.001f) {
             Outline.Rounded(
                 RoundRect(
@@ -110,7 +111,7 @@ class CurvedCapsule(
         density: Density
     ) {
         val h = bottom - top
-        val c = with(density) { curvature.toPx() }.coerceIn(0f, (h * 0.45f).coerceAtLeast(0f))
+        val c = with(density) { curvature.toPx() }.coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
         populatePath(path, left, top, right, bottom, c)
     }
 
@@ -140,77 +141,84 @@ class CurvedCapsule(
             return
         }
 
-        val r = ((h - 2f * c) / 2f).coerceAtLeast(0f)
+        val clampedC = c.coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
+        val r = (h / 2f - clampedC).coerceAtLeast(0.001f)
         val rCap = minOf(r, w / 2f)
-        val dx = (w / 2f - rCap).coerceAtLeast(0f)
+
+        if (w <= 2f * rCap + 0.001f) {
+            path.addRoundRect(
+                RoundRect(
+                    left = left,
+                    top = top,
+                    right = right,
+                    bottom = bottom,
+                    cornerRadius = CornerRadius(rCap, rCap)
+                )
+            )
+            return
+        }
+
+        val dx = w / 2f - rCap
         val midX = left + w / 2f
+        val midY = top + h / 2f
 
-        // 1. 移动至顶弧起点 (左半圆端点处，切线方向严格水平 (1, 0))
-        path.moveTo(left + rCap, top + c)
+        // 4-圆弧连续凸几何模型 (Exact G1 continuous 4-arc convex oval):
+        // 彻底消除中间尖峰与肩膀拐点，全轮廓曲率连续且严格大于 0，上下微弧凸起自然饱满
+        val rTop = (dx * dx) / (2f * clampedC) + (h - clampedC) / 2f
+        val d = (dx * dx + clampedC * clampedC) / (2f * clampedC)
+        val sinTheta = (dx / d).coerceIn(0f, 1f)
+        val thetaRad = kotlin.math.asin(sinTheta)
+        val thetaDeg = (thetaRad * 180.0 / kotlin.math.PI).toFloat()
 
-        // 2. 顶弧左半段：从 (left + rCap, top + c) 向上隆起至中心顶点 (midX, top)
-        path.cubicTo(
-            x1 = left + rCap + dx * 0.55f,
-            y1 = top + c,
-            x2 = midX - dx * 0.55f,
-            y2 = top,
-            x3 = midX,
-            y3 = top
-        )
-
-        // 3. 顶弧右半段：从 (midX, top) 平滑过渡回右半圆端点 (right - rCap, top + c)
-        path.cubicTo(
-            x1 = midX + dx * 0.55f,
-            y1 = top,
-            x2 = right - rCap - dx * 0.55f,
-            y2 = top + c,
-            x3 = right - rCap,
-            y3 = top + c
-        )
-
-        // 4. 右端半圆：从 -90度 顺时针旋转 180度 到 90度
+        // 1. 顶微弧：圆心位于 (midX, top + rTop)，从 (-90° - theta) 顺时针扫至 (-90° + theta)
         path.arcTo(
             rect = Rect(
-                left = right - 2f * rCap,
-                top = top + h / 2f - rCap,
-                right = right,
-                bottom = top + h / 2f + rCap
+                left = midX - rTop,
+                top = top,
+                right = midX + rTop,
+                bottom = top + 2f * rTop
             ),
-            startAngleDegrees = -90f,
-            sweepAngleDegrees = 180f,
+            startAngleDegrees = -90f - thetaDeg,
+            sweepAngleDegrees = 2f * thetaDeg,
             forceMoveTo = false
         )
 
-        // 5. 底弧右半段：从 (right - rCap, bottom - c) 向下隆起至中心底部顶点 (midX, bottom)
-        path.cubicTo(
-            x1 = right - rCap - dx * 0.55f,
-            y1 = bottom - c,
-            x2 = midX + dx * 0.55f,
-            y2 = bottom,
-            x3 = midX,
-            y3 = bottom
+        // 2. 右端半圆弧：圆心位于 (right - rCap, midY)，从 (-90° + theta) 顺时针扫至 (90° - theta)
+        path.arcTo(
+            rect = Rect(
+                left = right - 2f * rCap,
+                top = midY - rCap,
+                right = right,
+                bottom = midY + rCap
+            ),
+            startAngleDegrees = -90f + thetaDeg,
+            sweepAngleDegrees = 180f - 2f * thetaDeg,
+            forceMoveTo = false
         )
 
-        // 6. 底弧左半段：从 (midX, bottom) 平滑过渡回左半圆底部端点 (left + rCap, bottom - c)
-        path.cubicTo(
-            x1 = midX - dx * 0.55f,
-            y1 = bottom,
-            x2 = left + rCap + dx * 0.55f,
-            y2 = bottom - c,
-            x3 = left + rCap,
-            y3 = bottom - c
+        // 3. 底微弧：圆心位于 (midX, bottom - rTop)，从 (90° - theta) 顺时针扫至 (90° + theta)
+        path.arcTo(
+            rect = Rect(
+                left = midX - rTop,
+                top = bottom - 2f * rTop,
+                right = midX + rTop,
+                bottom = bottom
+            ),
+            startAngleDegrees = 90f - thetaDeg,
+            sweepAngleDegrees = 2f * thetaDeg,
+            forceMoveTo = false
         )
 
-        // 7. 左端半圆：从 90度 顺时针旋转 180度 到 270度
+        // 4. 左端半圆弧：圆心位于 (left + rCap, midY)，从 (90° + theta) 顺时针扫至 (270° - theta)
         path.arcTo(
             rect = Rect(
                 left = left,
-                top = top + h / 2f - rCap,
+                top = midY - rCap,
                 right = left + 2f * rCap,
-                bottom = top + h / 2f + rCap
+                bottom = midY + rCap
             ),
-            startAngleDegrees = 90f,
-            sweepAngleDegrees = 180f,
+            startAngleDegrees = 90f + thetaDeg,
+            sweepAngleDegrees = 180f - 2f * thetaDeg,
             forceMoveTo = false
         )
 

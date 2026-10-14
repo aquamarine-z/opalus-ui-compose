@@ -318,14 +318,13 @@ class DampedDragAnimation(
                                     .first()
                             }
                         }
-                        // 形状过渡：严格使用无过冲临界阻尼 (dampingRatio = 1.0f)，保证单调平滑收缩回到 inactive 形状，
+                        // 形状过渡：严格使用平滑单调动画，保证丝滑连续回到 inactive 形状，
                         // 杜绝因果冻弹簧在 0 附近振荡过冲而在 active 与 inactive 两种形状之间来回闪动
                         shapeProgressAnimation.animateTo(
                             targetValue = 0f,
-                            animationSpec = spring(
-                                dampingRatio = 1.0f,
-                                stiffness = physics.shrinkStiffness.coerceIn(120f, 600f),
-                                visibilityThreshold = 0.001f
+                            animationSpec = tween(
+                                durationMillis = 240,
+                                easing = FastOutSlowInEasing
                             )
                         )
                     }

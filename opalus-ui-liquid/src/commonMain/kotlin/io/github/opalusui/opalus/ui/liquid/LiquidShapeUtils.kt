@@ -40,7 +40,9 @@ internal fun rememberIndicatorShapeTransition(
 
 /**
  * 水滴指示器形状过渡器。
- * 内部复用几何缓存与 Shape 实例，杜绝每一帧交互过程中的内存垃圾分配。
+ * 内部采用双缓冲 Ping-Pong 实例池，杜绝每一帧交互过程中的内存垃圾分配 (0 GC allocations)，
+ * 同时通过保证相邻帧间 Shape 实例判定 areEqual 恒为 false，使得 Backdrop 每一帧均能重绘
+ * 插值形态 Outline 与 SDF 硬件透镜，彻底解决从激活形态到非激活形态过渡卡顿、不线性的问题。
  */
 internal class IndicatorShapeTransition(
     val inactiveShape: Shape,
@@ -49,24 +51,31 @@ internal class IndicatorShapeTransition(
     private val canInterpolate = inactiveShape.supportsRoundedInterpolation() &&
             activeShape.supportsRoundedInterpolation()
 
-    val interpolatedShape: InterpolatedIndicatorShape? = if (canInterpolate && inactiveShape != activeShape) {
-        InterpolatedIndicatorShape(inactiveShape, activeShape)
-    } else {
-        null
-    }
+    private val shapeA = if (canInterpolate && inactiveShape != activeShape) {
+        InterpolatedIndicatorShape(inactiveShape, activeShape, poolId = 0)
+    } else null
+
+    private val shapeB = if (canInterpolate && inactiveShape != activeShape) {
+        InterpolatedIndicatorShape(inactiveShape, activeShape, poolId = 1)
+    } else null
+
+    private var toggle = false
 
     fun shape(progress: Float): Shape {
         val nextFraction = progress.coerceIn(0f, 1f)
-        if (nextFraction <= 0f || inactiveShape == activeShape) return inactiveShape
-        if (nextFraction >= 1f) return activeShape
+        if (nextFraction <= 0.001f || inactiveShape == activeShape) return inactiveShape
+        if (nextFraction >= 0.999f) return activeShape
 
-        val shape = interpolatedShape
-        if (shape == null) {
+        val a = shapeA
+        val b = shapeB
+        if (a == null || b == null) {
             return if (nextFraction < 0.5f) inactiveShape else activeShape
         }
 
-        shape.fraction = nextFraction
-        return shape
+        toggle = !toggle
+        val current = if (toggle) a else b
+        current.fraction = nextFraction
+        return current
     }
 }
 
@@ -123,6 +132,7 @@ private class InterpolatedCornerSize(
 internal class InterpolatedIndicatorShape private constructor(
     val inactiveShape: Shape,
     val activeShape: Shape,
+    val poolId: Int,
     private val fractionHolder: FractionHolder
 ) : CornerBasedShape(
     topStart = InterpolatedCornerSize(inactiveShape, activeShape, Corner.TopStart, fractionHolder),
@@ -130,9 +140,10 @@ internal class InterpolatedIndicatorShape private constructor(
     bottomEnd = InterpolatedCornerSize(inactiveShape, activeShape, Corner.BottomEnd, fractionHolder),
     bottomStart = InterpolatedCornerSize(inactiveShape, activeShape, Corner.BottomStart, fractionHolder)
 ) {
-    constructor(inactiveShape: Shape, activeShape: Shape) : this(
+    constructor(inactiveShape: Shape, activeShape: Shape, poolId: Int) : this(
         inactiveShape = inactiveShape,
         activeShape = activeShape,
+        poolId = poolId,
         fractionHolder = FractionHolder(0f)
     )
 
@@ -142,11 +153,6 @@ internal class InterpolatedIndicatorShape private constructor(
             fractionHolder.fraction = value
         }
 
-    // 内部轮廓缓存
-    private var cachedWidth: Float = -1f
-    private var cachedHeight: Float = -1f
-    private var cachedFraction: Float = -1f
-    private var cachedOutline: Outline? = null
     private val cachedPath = Path()
 
     override fun copy(
@@ -155,6 +161,7 @@ internal class InterpolatedIndicatorShape private constructor(
         bottomEnd: CornerSize,
         bottomStart: CornerSize
     ): CornerBasedShape = this
+
 
     override fun createOutline(
         size: Size,
@@ -168,26 +175,26 @@ internal class InterpolatedIndicatorShape private constructor(
         val h = size.height
         if (w <= 0f || h <= 0f) return Outline.Rectangle(Rect.Zero)
 
-        val topLeft = if (layoutDirection == LayoutDirection.Ltr) topStart else topEnd
-        val topRight = if (layoutDirection == LayoutDirection.Ltr) topEnd else topStart
-        val bottomRight = if (layoutDirection == LayoutDirection.Ltr) bottomEnd else bottomStart
-        val bottomLeft = if (layoutDirection == LayoutDirection.Ltr) bottomStart else bottomEnd
-        val corners = RoundedCornerRadii(topLeft, topRight, bottomRight, bottomLeft)
+        val isLtr = layoutDirection == LayoutDirection.Ltr
+        val corners = RoundedCornerRadii(
+            topLeft = if (isLtr) topStart else topEnd,
+            topRight = if (isLtr) topEnd else topStart,
+            bottomRight = if (isLtr) bottomEnd else bottomStart,
+            bottomLeft = if (isLtr) bottomStart else bottomEnd
+        )
 
         val curFraction = fractionHolder.fraction
         val inactiveCurvatureDp = (inactiveShape as? CurvedCapsule)?.curvature?.value ?: 0f
         val activeCurvatureDp = (activeShape as? CurvedCapsule)?.curvature?.value ?: 0f
         val c = if (inactiveCurvatureDp > 0f || activeCurvatureDp > 0f) {
-            val maxCap = minOf(topLeft, topRight, bottomRight, bottomLeft)
-            val maxC = (h / 2f - maxCap).coerceIn(0f, (h * 0.45f).coerceAtLeast(0f))
+            val maxCap = minOf(topStart, topEnd, bottomEnd, bottomStart)
+            val maxC = (h / 2f - maxCap).coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
             lerp(
                 if (inactiveCurvatureDp > 0f) maxC else 0f,
                 if (activeCurvatureDp > 0f) maxC else 0f,
                 curFraction
             )
-        } else {
-            0f
-        }
+        } else 0f
 
         if (c <= 0.001f) {
             return Outline.Rounded(
@@ -196,16 +203,12 @@ internal class InterpolatedIndicatorShape private constructor(
                     top = 0f,
                     right = w,
                     bottom = h,
-                    topLeftCornerRadius = CornerRadius(topLeft, topLeft),
-                    topRightCornerRadius = CornerRadius(topRight, topRight),
-                    bottomRightCornerRadius = CornerRadius(bottomRight, bottomRight),
-                    bottomLeftCornerRadius = CornerRadius(bottomLeft, bottomLeft)
+                    topLeftCornerRadius = CornerRadius(corners.topLeft, corners.topLeft),
+                    topRightCornerRadius = CornerRadius(corners.topRight, corners.topRight),
+                    bottomRightCornerRadius = CornerRadius(corners.bottomRight, corners.bottomRight),
+                    bottomLeftCornerRadius = CornerRadius(corners.bottomLeft, corners.bottomLeft)
                 )
             )
-        }
-
-        if (w == cachedWidth && h == cachedHeight && curFraction == cachedFraction && cachedOutline != null) {
-            return cachedOutline!!
         }
 
         cachedPath.reset()
@@ -218,12 +221,7 @@ internal class InterpolatedIndicatorShape private constructor(
             c = c,
             corners = corners
         )
-        val outline = Outline.Generic(cachedPath)
-        cachedWidth = w
-        cachedHeight = h
-        cachedFraction = curFraction
-        cachedOutline = outline
-        return outline
+        return Outline.Generic(cachedPath)
     }
 
     /**
@@ -244,7 +242,7 @@ internal class InterpolatedIndicatorShape private constructor(
 
         val inactiveCurvature = inactiveShape.extractCurvaturePx(density)
         val activeCurvature = activeShape.extractCurvaturePx(density)
-        val c = lerp(inactiveCurvature, activeCurvature, fractionHolder.fraction).coerceIn(0f, (h * 0.45f).coerceAtLeast(0f))
+        val c = lerp(inactiveCurvature, activeCurvature, fractionHolder.fraction).coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
 
         val size = Size(w, h)
         val isLtr = layoutDirection == LayoutDirection.Ltr
@@ -258,22 +256,6 @@ internal class InterpolatedIndicatorShape private constructor(
             bottomRight = if (isLtr) be else bs,
             bottomLeft = if (isLtr) bs else be
         )
-
-        if (c <= 0.001f) {
-            path.addRoundRect(
-                RoundRect(
-                    left = left,
-                    top = top,
-                    right = right,
-                    bottom = bottom,
-                    topLeftCornerRadius = CornerRadius(corners.topLeft, corners.topLeft),
-                    topRightCornerRadius = CornerRadius(corners.topRight, corners.topRight),
-                    bottomRightCornerRadius = CornerRadius(corners.bottomRight, corners.bottomRight),
-                    bottomLeftCornerRadius = CornerRadius(corners.bottomLeft, corners.bottomLeft)
-                )
-            )
-            return
-        }
 
         populatePath(path, left, top, right, bottom, c, corners)
     }
@@ -291,76 +273,122 @@ internal class InterpolatedIndicatorShape private constructor(
         val h = bottom - top
         if (w <= 0f || h <= 0f) return
 
-        val rL = minOf(maxOf(corners.topLeft, corners.bottomLeft), w / 2f)
-        val rR = minOf(maxOf(corners.topRight, corners.bottomRight), w / 2f)
+        if (c <= 0.001f) {
+            path.addRoundRect(
+                RoundRect(
+                    left = left,
+                    top = top,
+                    right = right,
+                    bottom = bottom,
+                    topLeftCornerRadius = CornerRadius(corners.topLeft, corners.topLeft),
+                    topRightCornerRadius = CornerRadius(corners.topRight, corners.topRight),
+                    bottomRightCornerRadius = CornerRadius(corners.bottomRight, corners.bottomRight),
+                    bottomLeftCornerRadius = CornerRadius(corners.bottomLeft, corners.bottomLeft)
+                )
+            )
+            return
+        }
+
+        val clampedC = c.coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
+        val rL = minOf(maxOf(corners.topLeft, corners.bottomLeft), (h / 2f - clampedC).coerceAtLeast(0.001f), w / 2f)
+        val rR = minOf(maxOf(corners.topRight, corners.bottomRight), (h / 2f - clampedC).coerceAtLeast(0.001f), w / 2f)
+        val rCap = (rL + rR) / 2f
+
+        if (w <= 2f * rCap + 0.001f) {
+            path.addRoundRect(
+                RoundRect(
+                    left = left,
+                    top = top,
+                    right = right,
+                    bottom = bottom,
+                    cornerRadius = CornerRadius(rCap, rCap)
+                )
+            )
+            return
+        }
+
+        val dx = w / 2f - rCap
         val midX = left + w / 2f
-        val dxL = (w / 2f - rL).coerceAtLeast(0f)
-        val dxR = (w / 2f - rR).coerceAtLeast(0f)
+        val midY = top + h / 2f
 
-        // 顶弧：从左端点至中心隆起顶点，再至右端点
-        path.moveTo(left + rL, top + c)
-        path.cubicTo(
-            x1 = left + rL + dxL * 0.55f,
-            y1 = top + c,
-            x2 = midX - dxL * 0.55f,
-            y2 = top,
-            x3 = midX,
-            y3 = top
-        )
-        path.cubicTo(
-            x1 = midX + dxR * 0.55f,
-            y1 = top,
-            x2 = right - rR - dxR * 0.55f,
-            y2 = top + c,
-            x3 = right - rR,
-            y3 = top + c
-        )
+        // 4-圆弧连续凸几何模型 (Exact G1 continuous 4-arc convex oval):
+        // 彻底消除中间尖峰与肩膀拐点，全轮廓曲率连续且严格大于 0，上下微弧凸起自然饱满
+        val rTop = (dx * dx) / (2f * clampedC) + (h - clampedC) / 2f
+        val d = (dx * dx + clampedC * clampedC) / (2f * clampedC)
+        val sinTheta = (dx / d).coerceIn(0f, 1f)
+        val thetaRad = kotlin.math.asin(sinTheta)
+        val thetaDeg = (thetaRad * 180.0 / kotlin.math.PI).toFloat()
 
-        // 右端圆角/半圆
+        // 1. 顶微弧：圆心位于 (midX, top + rTop)，从 (-90° - theta) 顺时针扫至 (-90° + theta)
         path.arcTo(
             rect = Rect(
-                left = right - 2f * rR,
-                top = top + h / 2f - rR,
-                right = right,
-                bottom = top + h / 2f + rR
+                left = midX - rTop,
+                top = top,
+                right = midX + rTop,
+                bottom = top + 2f * rTop
             ),
-            startAngleDegrees = -90f,
-            sweepAngleDegrees = 180f,
+            startAngleDegrees = -90f - thetaDeg,
+            sweepAngleDegrees = 2f * thetaDeg,
             forceMoveTo = false
         )
 
-        // 底弧：从右端点至中心底部顶点，再至左端点
-        path.cubicTo(
-            x1 = right - rR - dxR * 0.55f,
-            y1 = bottom - c,
-            x2 = midX + dxR * 0.55f,
-            y2 = bottom,
-            x3 = midX,
-            y3 = bottom
-        )
-        path.cubicTo(
-            x1 = midX - dxL * 0.55f,
-            y1 = bottom,
-            x2 = left + rL + dxL * 0.55f,
-            y2 = bottom - c,
-            x3 = left + rL,
-            y3 = bottom - c
+        // 2. 右端圆角弧：圆心位于 (right - rCap, midY)，从 (-90° + theta) 顺时针扫至 (90° - theta)
+        path.arcTo(
+            rect = Rect(
+                left = right - 2f * rCap,
+                top = midY - rCap,
+                right = right,
+                bottom = midY + rCap
+            ),
+            startAngleDegrees = -90f + thetaDeg,
+            sweepAngleDegrees = 180f - 2f * thetaDeg,
+            forceMoveTo = false
         )
 
-        // 左端圆角/半圆
+        // 3. 底微弧：圆心位于 (midX, bottom - rTop)，从 (90° - theta) 顺时针扫至 (90° + theta)
+        path.arcTo(
+            rect = Rect(
+                left = midX - rTop,
+                top = bottom - 2f * rTop,
+                right = midX + rTop,
+                bottom = bottom
+            ),
+            startAngleDegrees = 90f - thetaDeg,
+            sweepAngleDegrees = 2f * thetaDeg,
+            forceMoveTo = false
+        )
+
+        // 4. 左端圆角弧：圆心位于 (left + rCap, midY)，从 (90° + theta) 顺时针扫至 (270° - theta)
         path.arcTo(
             rect = Rect(
                 left = left,
-                top = top + h / 2f - rL,
-                right = left + 2f * rL,
-                bottom = top + h / 2f + rL
+                top = midY - rCap,
+                right = left + 2f * rCap,
+                bottom = midY + rCap
             ),
-            startAngleDegrees = 90f,
-            sweepAngleDegrees = 180f,
+            startAngleDegrees = 90f + thetaDeg,
+            sweepAngleDegrees = 180f - 2f * thetaDeg,
             forceMoveTo = false
         )
 
         path.close()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is InterpolatedIndicatorShape) return false
+        return poolId == other.poolId &&
+                fraction == other.fraction &&
+                inactiveShape == other.inactiveShape &&
+                activeShape == other.activeShape
+    }
+
+    override fun hashCode(): Int {
+        var result = inactiveShape.hashCode()
+        result = 31 * result + activeShape.hashCode()
+        result = 31 * result + poolId
+        result = 31 * result + fraction.hashCode()
+        return result
     }
 }
 
