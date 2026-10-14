@@ -58,6 +58,11 @@ internal fun LiquidSelectionIndicator(
 ) {
     val combinedBackdrop = rememberCombinedBackdrop(backdrop, dockBackdrop, activeButtonsBackdrop)
     val lensSupported = activeIndicatorShape.supportsLiquidLens()
+    val indicatorShapeTransition = rememberIndicatorShapeTransition(
+        inactiveShape = inactiveIndicatorShape,
+        activeShape = activeIndicatorShape
+    )
+    val borderPath = remember { Path() }
     var shaderWarmupVisible by remember(
         optics.chromaticAberration,
         inactiveIndicatorShape,
@@ -91,14 +96,9 @@ internal fun LiquidSelectionIndicator(
             .drawBackdrop(
                 backdrop = combinedBackdrop,
                 shape = {
-                    // Keep the original idle geometry until the droplet is
-                    // actually activated. The active shape then takes over
-                    // without adding a recomposition to pointer frames.
-                    if (shaderWarmupVisible || state.pressProgress > 0.001f) {
-                        activeIndicatorShape
-                    } else {
-                        inactiveIndicatorShape
-                    }
+                    indicatorShapeTransition.shape(
+                        if (shaderWarmupVisible) 1f else state.shapeProgress
+                    )
                 },
                 effects = {
                     val visualProgress = state.pressProgress.coerceIn(0f, 1f)
@@ -197,11 +197,7 @@ internal fun LiquidSelectionIndicator(
                         width = (size.width - strokeWidth).coerceAtLeast(0f),
                         height = (size.height - strokeWidth).coerceAtLeast(0f)
                     )
-                    val currentShape = if (state.pressProgress > 0.001f) {
-                        activeIndicatorShape
-                    } else {
-                        inactiveIndicatorShape
-                    }
+                    val currentShape = indicatorShapeTransition.shape(state.shapeProgress)
                     if (currentShape is Capsule) {
                         drawRoundRect(
                             color = colors.indicatorBorderColor.copy(
@@ -213,10 +209,30 @@ internal fun LiquidSelectionIndicator(
                             style = Stroke(width = strokeWidth)
                         )
                     } else {
-                        val borderOutline = currentShape.createOutline(borderSize, layoutDirection, this)
-                        val borderPath = Path().apply {
-                            addOutline(borderOutline)
-                            translate(Offset(inset, inset))
+                        borderPath.reset()
+                        if (currentShape is CurvedCapsule) {
+                            currentShape.populatePath(
+                                path = borderPath,
+                                left = inset,
+                                top = inset,
+                                right = inset + borderSize.width,
+                                bottom = inset + borderSize.height,
+                                density = this
+                            )
+                        } else if (currentShape is InterpolatedIndicatorShape) {
+                            currentShape.populatePath(
+                                path = borderPath,
+                                left = inset,
+                                top = inset,
+                                right = inset + borderSize.width,
+                                bottom = inset + borderSize.height,
+                                layoutDirection = layoutDirection,
+                                density = this
+                            )
+                        } else {
+                            val borderOutline = currentShape.createOutline(borderSize, layoutDirection, this)
+                            borderPath.addOutline(borderOutline)
+                            borderPath.translate(Offset(inset, inset))
                         }
                         drawPath(
                             path = borderPath,

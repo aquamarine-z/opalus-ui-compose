@@ -104,6 +104,10 @@ internal fun <T> LiquidTabBarPlatter(
             .padding(horizontal = dimensions.horizontalPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val indicatorShapeTransition = rememberIndicatorShapeTransition(
+            inactiveShape = inactiveIndicatorShape,
+            activeShape = activeIndicatorShape
+        )
         // 反向几何遮罩：在水滴物理覆盖区域内，底层不绘制灰色按钮文字和图标，彻底杜绝重影
         val dropletPath = remember { Path() }
         Box(
@@ -152,11 +156,7 @@ internal fun <T> LiquidTabBarPlatter(
                     val top = centerY - halfHeight
                     val bottom = centerY + halfHeight
 
-                    val currentIndicatorShape = if (visualProgress > 0.001f) {
-                        activeIndicatorShape
-                    } else {
-                        inactiveIndicatorShape
-                    }
+                    val currentIndicatorShape = indicatorShapeTransition.shape(state.shapeProgress)
 
                     dropletPath.reset()
                     if (currentIndicatorShape is Capsule) {
@@ -169,6 +169,25 @@ internal fun <T> LiquidTabBarPlatter(
                                 radiusX = halfHeight,
                                 radiusY = halfHeight
                             )
+                        )
+                    } else if (currentIndicatorShape is CurvedCapsule) {
+                        currentIndicatorShape.populatePath(
+                            path = dropletPath,
+                            left = left,
+                            top = top,
+                            right = right,
+                            bottom = bottom,
+                            density = this
+                        )
+                    } else if (currentIndicatorShape is InterpolatedIndicatorShape) {
+                        currentIndicatorShape.populatePath(
+                            path = dropletPath,
+                            left = left,
+                            top = top,
+                            right = right,
+                            bottom = bottom,
+                            layoutDirection = layoutDirection,
+                            density = this
                         )
                     } else {
                         val dropletSize = Size(

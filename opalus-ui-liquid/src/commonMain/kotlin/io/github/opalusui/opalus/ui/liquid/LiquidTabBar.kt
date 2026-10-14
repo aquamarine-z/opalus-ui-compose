@@ -37,13 +37,14 @@ fun <T> LiquidTabBar(
     optics: LiquidTabBarOptics = LiquidTabBarDefaults.optics(),
     physics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics(),
     events: LiquidTabBarEvents = LiquidTabBarDefaults.events(),
+    shapes: LiquidTabBarShapes = LiquidTabBarDefaults.shapes(),
     state: LiquidTabBarState = rememberLiquidTabBarState(selectedTabIndex, items.size, physics, events),
     inactiveItem: @Composable (index: Int, item: T) -> Unit,
     activeItem: @Composable (index: Int, item: T) -> Unit = inactiveItem,
-    barShape: Shape = Capsule(),
+    barShape: Shape = shapes.barShape,
     indicatorShape: Shape = Capsule(),
-    inactiveIndicatorShape: Shape = indicatorShape,
-    activeIndicatorShape: Shape = indicatorShape
+    inactiveIndicatorShape: Shape = if (barShape != shapes.barShape || indicatorShape !is Capsule) indicatorShape else shapes.inactiveIndicatorShape,
+    activeIndicatorShape: Shape = if (barShape != shapes.barShape || indicatorShape !is Capsule) (if (indicatorShape is Capsule) CurvedCapsule() else indicatorShape) else shapes.activeIndicatorShape
 ) {
     if (items.isEmpty()) return
 

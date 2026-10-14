@@ -91,6 +91,8 @@ class DampedDragAnimation(
         Animatable(0f, 5f)
     private val pressProgressAnimation =
         Animatable(0f, 0.001f)
+    private val shapeProgressAnimation =
+        Animatable(0f, 0.001f)
     private val scaleXAnimation =
         Animatable(initialScale, 0.001f)
     private val scaleYAnimation =
@@ -111,6 +113,7 @@ class DampedDragAnimation(
     val progress: Float get() = (value - valueRange.start) / (valueRange.endInclusive - valueRange.start)
     val targetValue: Float get() = if (dragFrameActive) dragTargetValue else valueAnimation.targetValue
     val pressProgress: Float get() = pressProgressAnimation.value
+    val shapeProgress: Float get() = shapeProgressAnimation.value.coerceIn(0f, 1f)
     val scaleX: Float get() = scaleXAnimation.value
     val scaleY: Float get() = scaleYAnimation.value
     val velocity: Float get() = if (dragFrameActive) dragVelocity else velocityAnimation.value
@@ -152,6 +155,9 @@ class DampedDragAnimation(
         pressJob = animationScope.launch {
             launch {
                 pressProgressAnimation.animateTo(1f, growProgressAnimationSpec)
+            }
+            launch {
+                shapeProgressAnimation.animateTo(1f, growProgressAnimationSpec)
             }
             launch {
                 scaleXAnimation.animateTo(physics.platterActiveScaleX, scaleXGrowSpec)
@@ -304,6 +310,27 @@ class DampedDragAnimation(
                     }
 
                     launch {
+                        val initialDist = abs(valueAnimation.value - target)
+                        if (initialDist > physics.dockingShrinkThreshold) {
+                            withTimeoutOrNull(600L) {
+                                snapshotFlow { valueAnimation.value }
+                                    .filter { abs(it - target) < physics.dockingShrinkThreshold }
+                                    .first()
+                            }
+                        }
+                        // 形状过渡：严格使用无过冲临界阻尼 (dampingRatio = 1.0f)，保证单调平滑收缩回到 inactive 形状，
+                        // 杜绝因果冻弹簧在 0 附近振荡过冲而在 active 与 inactive 两种形状之间来回闪动
+                        shapeProgressAnimation.animateTo(
+                            targetValue = 0f,
+                            animationSpec = spring(
+                                dampingRatio = 1.0f,
+                                stiffness = physics.shrinkStiffness.coerceIn(120f, 600f),
+                                visibilityThreshold = 0.001f
+                            )
+                        )
+                    }
+
+                    launch {
                         val currentPos = valueAnimation.value
                         val dist = target - currentPos
                         val dir = when {
@@ -349,6 +376,7 @@ class DampedDragAnimation(
                     val settledTarget = target.coerceIn(valueRange)
                     valueAnimation.snapTo(settledTarget)
                     pressProgressAnimation.snapTo(0f)
+                    shapeProgressAnimation.snapTo(0f)
                     scaleXAnimation.snapTo(initialScale)
                     scaleYAnimation.snapTo(initialScale)
                     velocityAnimation.snapTo(0f)

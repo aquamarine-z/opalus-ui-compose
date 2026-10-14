@@ -82,6 +82,9 @@ class LiquidTabBarState(
     val pressProgress: Float
         get() = dampedAnimation.pressProgress
 
+    val shapeProgress: Float
+        get() = dampedAnimation.shapeProgress
+
     val scaleX: Float
         get() = dampedAnimation.scaleX
 

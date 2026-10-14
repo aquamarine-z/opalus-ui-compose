@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.shapes.Capsule
+import io.github.opalusui.opalus.ui.liquid.CurvedCapsule
 import io.github.opalusui.opalus.ui.liquid.LiquidBoundaryEdge
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBar
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBarDefaults
@@ -68,7 +69,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
     var selectedTab3 by remember { mutableStateOf(0) }
     val tabs3 = remember { listOf("Home", "Search", "Profile") }
     var useRoundedInactiveIndicatorDemo by remember { mutableStateOf(true) }
-    var useRoundedActiveIndicatorDemo by remember { mutableStateOf(false) }
+    var activeIndicatorShapeMode by remember { mutableStateOf(0) } // 0: CurvedCapsule, 1: Capsule, 2: RoundedRectangle
     val eventLogState = remember { mutableStateOf("Ready (Idle)") }
     val eventLogWriter = rememberDemoEventLogWriter(eventLogState)
 
@@ -502,35 +503,50 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     if (useRoundedInactiveIndicatorDemo) {
                         OutlinedButton(
                             onClick = { useRoundedInactiveIndicatorDemo = false },
                             shape = RoundedCornerShape(10.dp)
                         ) {
-                            Text("Inactive: rounded")
+                            Text("Inactive: Rounded(16dp)")
                         }
                     } else {
                         FilledTonalButton(
                             onClick = { useRoundedInactiveIndicatorDemo = true },
                             shape = RoundedCornerShape(10.dp)
                         ) {
-                            Text("Inactive: capsule")
+                            Text("Inactive: Capsule")
                         }
                     }
-                    if (useRoundedActiveIndicatorDemo) {
-                        FilledTonalButton(
-                            onClick = { useRoundedActiveIndicatorDemo = false },
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("Active: rounded")
+
+                    when (activeIndicatorShapeMode) {
+                        0 -> {
+                            FilledTonalButton(
+                                onClick = { activeIndicatorShapeMode = 1 },
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Active: CurvedCapsule (Default)")
+                            }
                         }
-                    } else {
-                        OutlinedButton(
-                            onClick = { useRoundedActiveIndicatorDemo = true },
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("Active: capsule")
+                        1 -> {
+                            OutlinedButton(
+                                onClick = { activeIndicatorShapeMode = 2 },
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Active: Straight Capsule")
+                            }
+                        }
+                        else -> {
+                            OutlinedButton(
+                                onClick = { activeIndicatorShapeMode = 0 },
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Active: Rounded(16dp)")
+                            }
                         }
                     }
                 }
@@ -563,10 +579,10 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                             } else {
                                 Capsule()
                             },
-                            activeIndicatorShape = if (useRoundedActiveIndicatorDemo) {
-                                RoundedCornerShape(16.dp)
-                            } else {
-                                Capsule()
+                            activeIndicatorShape = when (activeIndicatorShapeMode) {
+                                0 -> CurvedCapsule()
+                                1 -> Capsule()
+                                else -> RoundedCornerShape(16.dp)
                             },
                             modifier = Modifier
                                 .widthIn(max = 420.dp)

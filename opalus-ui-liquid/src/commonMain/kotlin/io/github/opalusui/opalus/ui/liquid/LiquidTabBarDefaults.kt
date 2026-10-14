@@ -2,8 +2,20 @@ package io.github.opalusui.opalus.ui.liquid
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.kyant.shapes.Capsule
+
+/**
+ * iOS HIG 规范：流体导航栏形状配置设计令牌 (LiquidTabBarShapes)
+ */
+@Immutable
+data class LiquidTabBarShapes(
+    val barShape: Shape = Capsule(),
+    val inactiveIndicatorShape: Shape = Capsule(),
+    val activeIndicatorShape: Shape = CurvedCapsule()
+)
 
 /**
  * iOS HIG 规范：流体导航栏颜色与材质设计令牌 (LiquidTabBarColors)
@@ -257,6 +269,23 @@ object LiquidTabBarDefaults {
         dropletElasticity = dropletElasticity,
         dockingShrinkThreshold = dockingShrinkThreshold,
         platterActivationDurationMillis = platterActivationDurationMillis
+    )
+
+    /**
+     * 导航栏与水滴形状配置工厂
+     *
+     * 默认激活态水滴形状为 [CurvedCapsule]，在保持两端饱满半圆的同时，上下边缘具有极其微妙自然的微弧度，
+     * 完美贴合真实流体水珠在表面张力下的微饱满质感。
+     */
+    fun shapes(
+        barShape: Shape = Capsule(),
+        indicatorShape: Shape = Capsule(),
+        inactiveIndicatorShape: Shape = indicatorShape,
+        activeIndicatorShape: Shape = if (indicatorShape is Capsule) CurvedCapsule() else indicatorShape
+    ): LiquidTabBarShapes = LiquidTabBarShapes(
+        barShape = barShape,
+        inactiveIndicatorShape = inactiveIndicatorShape,
+        activeIndicatorShape = activeIndicatorShape
     )
 
     /**

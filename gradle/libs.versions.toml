@@ -18,6 +18,7 @@ materialIconsExtended = "1.7.8"
 opalusUi = "0.2.7"
 kyant-backdrop = "2.0.1"
 kyant-shapes = "1.2.1"
+storytale = "0.1.0-alpha01"
 
 [libraries]
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
@@ -44,3 +45,4 @@ composeHotReload = { id = "org.jetbrains.compose.hot-reload", version.ref = "com
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+storytale = { id = "org.jetbrains.compose.storytale", version.ref = "storytale" }
