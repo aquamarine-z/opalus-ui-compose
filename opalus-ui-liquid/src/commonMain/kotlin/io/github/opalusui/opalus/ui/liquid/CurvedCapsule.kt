@@ -75,7 +75,7 @@ class CurvedCapsule(
         }
 
         val c = (h / 2f - topStart).coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
-        val outline = if (c <= 0.001f) {
+        val outline = if (c <= 0.1f) {
             Outline.Rounded(
                 RoundRect(
                     left = 0f,
@@ -127,7 +127,7 @@ class CurvedCapsule(
         val h = bottom - top
         if (w <= 0f || h <= 0f) return
 
-        if (c <= 0.001f) {
+        if (c <= 0.1f) {
             val r = (h / 2f).coerceAtLeast(0f)
             path.addRoundRect(
                 RoundRect(
@@ -180,7 +180,7 @@ class CurvedCapsule(
             ),
             startAngleDegrees = -90f - thetaDeg,
             sweepAngleDegrees = 2f * thetaDeg,
-            forceMoveTo = false
+            forceMoveTo = true
         )
 
         // 2. 右端半圆弧：圆心位于 (right - rCap, midY)，从 (-90° + theta) 顺时针扫至 (90° - theta)

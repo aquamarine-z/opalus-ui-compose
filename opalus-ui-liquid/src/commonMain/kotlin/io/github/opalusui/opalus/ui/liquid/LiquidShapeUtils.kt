@@ -59,12 +59,19 @@ internal class IndicatorShapeTransition(
         InterpolatedIndicatorShape(inactiveShape, activeShape, poolId = 1)
     } else null
 
+    private var lastFraction = -1f
     private var toggle = false
 
     fun shape(progress: Float): Shape {
         val nextFraction = progress.coerceIn(0f, 1f)
-        if (nextFraction <= 0.001f || inactiveShape == activeShape) return inactiveShape
-        if (nextFraction >= 0.999f) return activeShape
+        if (nextFraction <= 0.001f || inactiveShape == activeShape) {
+            lastFraction = -1f
+            return inactiveShape
+        }
+        if (nextFraction >= 0.999f) {
+            lastFraction = -1f
+            return activeShape
+        }
 
         val a = shapeA
         val b = shapeB
@@ -72,10 +79,14 @@ internal class IndicatorShapeTransition(
             return if (nextFraction < 0.5f) inactiveShape else activeShape
         }
 
-        toggle = !toggle
-        val current = if (toggle) a else b
-        current.fraction = nextFraction
-        return current
+        if (nextFraction != lastFraction) {
+            lastFraction = nextFraction
+            toggle = !toggle
+            a.fraction = nextFraction
+            b.fraction = nextFraction
+        }
+
+        return if (toggle) a else b
     }
 }
 
@@ -97,7 +108,10 @@ private enum class Corner {
     BottomStart
 }
 
-internal class FractionHolder(var fraction: Float = 0f)
+internal class FractionHolder(
+    var fraction: Float = 0f,
+    var density: Density = Density(1f)
+)
 
 private class InterpolatedCornerSize(
     private val inactiveShape: Shape,
@@ -106,6 +120,7 @@ private class InterpolatedCornerSize(
     private val fractionHolder: FractionHolder
 ) : CornerSize {
     override fun toPx(shapeSize: Size, density: Density): Float {
+        fractionHolder.density = density
         val startRadii = inactiveShape.extractCornerRadii(shapeSize, LayoutDirection.Ltr, density)
         val endRadii = activeShape.extractCornerRadii(shapeSize, LayoutDirection.Ltr, density)
         val startRadius = when (corner) {
@@ -162,7 +177,6 @@ internal class InterpolatedIndicatorShape private constructor(
         bottomStart: CornerSize
     ): CornerBasedShape = this
 
-
     override fun createOutline(
         size: Size,
         topStart: Float,
@@ -184,19 +198,13 @@ internal class InterpolatedIndicatorShape private constructor(
         )
 
         val curFraction = fractionHolder.fraction
-        val inactiveCurvatureDp = (inactiveShape as? CurvedCapsule)?.curvature?.value ?: 0f
-        val activeCurvatureDp = (activeShape as? CurvedCapsule)?.curvature?.value ?: 0f
-        val c = if (inactiveCurvatureDp > 0f || activeCurvatureDp > 0f) {
-            val maxCap = minOf(topStart, topEnd, bottomEnd, bottomStart)
-            val maxC = (h / 2f - maxCap).coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
-            lerp(
-                if (inactiveCurvatureDp > 0f) maxC else 0f,
-                if (activeCurvatureDp > 0f) maxC else 0f,
-                curFraction
-            )
-        } else 0f
+        val density = fractionHolder.density
+        val inactiveCurvaturePx = inactiveShape.extractCurvaturePx(density)
+        val activeCurvaturePx = activeShape.extractCurvaturePx(density)
+        val c = lerp(inactiveCurvaturePx, activeCurvaturePx, curFraction)
+            .coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
 
-        if (c <= 0.001f) {
+        if (c <= 0.1f) {
             return Outline.Rounded(
                 RoundRect(
                     left = 0f,
@@ -273,7 +281,10 @@ internal class InterpolatedIndicatorShape private constructor(
         val h = bottom - top
         if (w <= 0f || h <= 0f) return
 
-        if (c <= 0.001f) {
+        val clampedC = c.coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
+
+        // 当曲率微小到亚像素级别时，直接按标准圆角矩形生成，彻底避免超大半径圆弧在首尾连接时产生畸变多边形
+        if (clampedC <= 0.1f) {
             path.addRoundRect(
                 RoundRect(
                     left = left,
@@ -289,87 +300,151 @@ internal class InterpolatedIndicatorShape private constructor(
             return
         }
 
-        val clampedC = c.coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
-        val rL = minOf(maxOf(corners.topLeft, corners.bottomLeft), (h / 2f - clampedC).coerceAtLeast(0.001f), w / 2f)
-        val rR = minOf(maxOf(corners.topRight, corners.bottomRight), (h / 2f - clampedC).coerceAtLeast(0.001f), w / 2f)
-        val rCap = (rL + rR) / 2f
+        // 规范化 4 角半径，严格保持独立 4 角几何位置，绝不向垂直中心收缩塌陷
+        val maxR = minOf((w / 2f).coerceAtLeast(0f), ((h - 2f * clampedC) / 2f).coerceAtLeast(0f))
+        val rTL = corners.topLeft.coerceIn(0f, maxR)
+        val rTR = corners.topRight.coerceIn(0f, maxR)
+        val rBR = corners.bottomRight.coerceIn(0f, maxR)
+        val rBL = corners.bottomLeft.coerceIn(0f, maxR)
 
-        if (w <= 2f * rCap + 0.001f) {
+        val wTop = (right - rTR) - (left + rTL)
+        val wBot = (right - rBR) - (left + rBL)
+
+        if (wTop <= 0.001f || wBot <= 0.001f) {
             path.addRoundRect(
                 RoundRect(
                     left = left,
                     top = top,
                     right = right,
                     bottom = bottom,
-                    cornerRadius = CornerRadius(rCap, rCap)
+                    topLeftCornerRadius = CornerRadius(rTL, rTL),
+                    topRightCornerRadius = CornerRadius(rTR, rTR),
+                    bottomRightCornerRadius = CornerRadius(rBR, rBR),
+                    bottomLeftCornerRadius = CornerRadius(rBL, rBL)
                 )
             )
             return
         }
 
-        val dx = w / 2f - rCap
-        val midX = left + w / 2f
-        val midY = top + h / 2f
+        val dxTop = wTop / 2f
+        val midXTop = left + rTL + dxTop
+        val rTop = (dxTop * dxTop + clampedC * clampedC) / (2f * clampedC)
+        val sinThetaTop = (dxTop / rTop).coerceIn(0f, 1f)
+        val thetaTopDeg = (kotlin.math.asin(sinThetaTop) * 180.0 / kotlin.math.PI).toFloat()
 
-        // 4-圆弧连续凸几何模型 (Exact G1 continuous 4-arc convex oval):
-        // 彻底消除中间尖峰与肩膀拐点，全轮廓曲率连续且严格大于 0，上下微弧凸起自然饱满
-        val rTop = (dx * dx) / (2f * clampedC) + (h - clampedC) / 2f
-        val d = (dx * dx + clampedC * clampedC) / (2f * clampedC)
-        val sinTheta = (dx / d).coerceIn(0f, 1f)
-        val thetaRad = kotlin.math.asin(sinTheta)
-        val thetaDeg = (thetaRad * 180.0 / kotlin.math.PI).toFloat()
+        val dxBot = wBot / 2f
+        val midXBot = left + rBL + dxBot
+        val rBot = (dxBot * dxBot + clampedC * clampedC) / (2f * clampedC)
+        val sinThetaBot = (dxBot / rBot).coerceIn(0f, 1f)
+        val thetaBotDeg = (kotlin.math.asin(sinThetaBot) * 180.0 / kotlin.math.PI).toFloat()
 
-        // 1. 顶微弧：圆心位于 (midX, top + rTop)，从 (-90° - theta) 顺时针扫至 (-90° + theta)
+        // 1. 顶微弧：首段必须 forceMoveTo = true，开始全新轮廓，杜绝连向 (0,0) 的杂乱多边形折线
         path.arcTo(
             rect = Rect(
-                left = midX - rTop,
+                left = midXTop - rTop,
                 top = top,
-                right = midX + rTop,
+                right = midXTop + rTop,
                 bottom = top + 2f * rTop
             ),
-            startAngleDegrees = -90f - thetaDeg,
-            sweepAngleDegrees = 2f * thetaDeg,
-            forceMoveTo = false
+            startAngleDegrees = -90f - thetaTopDeg,
+            sweepAngleDegrees = 2f * thetaTopDeg,
+            forceMoveTo = true
         )
 
-        // 2. 右端圆角弧：圆心位于 (right - rCap, midY)，从 (-90° + theta) 顺时针扫至 (90° - theta)
-        path.arcTo(
-            rect = Rect(
-                left = right - 2f * rCap,
-                top = midY - rCap,
-                right = right,
-                bottom = midY + rCap
-            ),
-            startAngleDegrees = -90f + thetaDeg,
-            sweepAngleDegrees = 180f - 2f * thetaDeg,
-            forceMoveTo = false
-        )
+        // 2. 右上角圆角：从 (-90°) 顺时针扫至 (0°)
+        if (rTR > 0.001f) {
+            path.arcTo(
+                rect = Rect(
+                    left = right - 2f * rTR,
+                    top = top + clampedC,
+                    right = right,
+                    bottom = top + clampedC + 2f * rTR
+                ),
+                startAngleDegrees = -90f,
+                sweepAngleDegrees = 90f,
+                forceMoveTo = false
+            )
+        } else {
+            path.lineTo(right, top + clampedC)
+        }
 
-        // 3. 底微弧：圆心位于 (midX, bottom - rTop)，从 (90° - theta) 顺时针扫至 (90° + theta)
+        // 3. 右侧竖直边（当为圆角矩形时 rTR + rBR < h - 2c，保持竖直平直边；当为胶囊时长度自动收缩为 0）
+        val yRightBot = bottom - clampedC - rBR
+        val yRightTop = top + clampedC + rTR
+        if (yRightBot > yRightTop + 0.001f) {
+            path.lineTo(right, yRightBot)
+        }
+
+        // 4. 右下角圆角：从 (0°) 顺时针扫至 (90°)
+        if (rBR > 0.001f) {
+            path.arcTo(
+                rect = Rect(
+                    left = right - 2f * rBR,
+                    top = bottom - clampedC - 2f * rBR,
+                    right = right,
+                    bottom = bottom - clampedC
+                ),
+                startAngleDegrees = 0f,
+                sweepAngleDegrees = 90f,
+                forceMoveTo = false
+            )
+        } else {
+            path.lineTo(right - rBR, bottom - clampedC)
+        }
+
+        // 5. 底微弧：圆心 (midXBot, bottom - rBot)，从 (90° - thetaBot) 顺时针扫至 (90° + thetaBot)
         path.arcTo(
             rect = Rect(
-                left = midX - rTop,
-                top = bottom - 2f * rTop,
-                right = midX + rTop,
+                left = midXBot - rBot,
+                top = bottom - 2f * rBot,
+                right = midXBot + rBot,
                 bottom = bottom
             ),
-            startAngleDegrees = 90f - thetaDeg,
-            sweepAngleDegrees = 2f * thetaDeg,
+            startAngleDegrees = 90f - thetaBotDeg,
+            sweepAngleDegrees = 2f * thetaBotDeg,
             forceMoveTo = false
         )
 
-        // 4. 左端圆角弧：圆心位于 (left + rCap, midY)，从 (90° + theta) 顺时针扫至 (270° - theta)
-        path.arcTo(
-            rect = Rect(
-                left = left,
-                top = midY - rCap,
-                right = left + 2f * rCap,
-                bottom = midY + rCap
-            ),
-            startAngleDegrees = 90f + thetaDeg,
-            sweepAngleDegrees = 180f - 2f * thetaDeg,
-            forceMoveTo = false
-        )
+        // 6. 左下角圆角：从 (90°) 顺时针扫至 (180°)
+        if (rBL > 0.001f) {
+            path.arcTo(
+                rect = Rect(
+                    left = left,
+                    top = bottom - clampedC - 2f * rBL,
+                    right = left + 2f * rBL,
+                    bottom = bottom - clampedC
+                ),
+                startAngleDegrees = 90f,
+                sweepAngleDegrees = 90f,
+                forceMoveTo = false
+            )
+        } else {
+            path.lineTo(left, bottom - clampedC)
+        }
+
+        // 7. 左侧竖直边
+        val yLeftTop = top + clampedC + rTL
+        val yLeftBot = bottom - clampedC - rBL
+        if (yLeftBot > yLeftTop + 0.001f) {
+            path.lineTo(left, yLeftTop)
+        }
+
+        // 8. 左上角圆角：从 (180°) 顺时针扫至 (270° / -90°)
+        if (rTL > 0.001f) {
+            path.arcTo(
+                rect = Rect(
+                    left = left,
+                    top = top + clampedC,
+                    right = left + 2f * rTL,
+                    bottom = top + clampedC + 2f * rTL
+                ),
+                startAngleDegrees = 180f,
+                sweepAngleDegrees = 90f,
+                forceMoveTo = false
+            )
+        } else {
+            path.lineTo(left + rTL, top + clampedC)
+        }
 
         path.close()
     }
