@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.emptyBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.shapes.Capsule
 
 /**
  * iOS HIG 规范：顶级流体导航栏组件 (LiquidTabBar)
@@ -37,7 +39,9 @@ fun <T> LiquidTabBar(
     events: LiquidTabBarEvents = LiquidTabBarDefaults.events(),
     state: LiquidTabBarState = rememberLiquidTabBarState(selectedTabIndex, items.size, physics, events),
     inactiveItem: @Composable (index: Int, item: T) -> Unit,
-    activeItem: @Composable (index: Int, item: T) -> Unit = inactiveItem
+    activeItem: @Composable (index: Int, item: T) -> Unit = inactiveItem,
+    barShape: Shape = Capsule(),
+    indicatorShape: Shape = Capsule()
 ) {
     if (items.isEmpty()) return
 
@@ -134,6 +138,8 @@ fun <T> LiquidTabBar(
                     state = state,
                     tabWidth = tabWidth,
                     isLtr = isLtr,
+                    barShape = barShape,
+                    indicatorShape = indicatorShape,
                     inactiveItem = inactiveItem
                 )
 
@@ -160,7 +166,8 @@ fun <T> LiquidTabBar(
                     state = state,
                     tabWidth = tabWidth,
                     tabsCount = items.size,
-                    isLtr = isLtr
+                    isLtr = isLtr,
+                    indicatorShape = indicatorShape
                 )
             }
         }
@@ -182,7 +189,9 @@ fun LiquidTabBar(
     optics: LiquidTabBarOptics = LiquidTabBarDefaults.optics(),
     physics: LiquidTabBarPhysics = LiquidTabBarDefaults.physics(),
     events: LiquidTabBarEvents = LiquidTabBarDefaults.events(),
-    state: LiquidTabBarState = rememberLiquidTabBarState(selectedTabIndex, items.size, physics, events)
+    state: LiquidTabBarState = rememberLiquidTabBarState(selectedTabIndex, items.size, physics, events),
+    barShape: Shape = Capsule(),
+    indicatorShape: Shape = Capsule()
 ) {
     LiquidTabBar(
         items = items,
@@ -196,6 +205,8 @@ fun LiquidTabBar(
         physics = physics,
         events = events,
         state = state,
+        barShape = barShape,
+        indicatorShape = indicatorShape,
         inactiveItem = { _, item -> item.inactive() },
         activeItem = { _, item -> item.active() }
     )

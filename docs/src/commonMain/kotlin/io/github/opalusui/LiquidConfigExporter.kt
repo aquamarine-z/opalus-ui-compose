@@ -92,6 +92,7 @@ fun getModifiedParamsCount(
     if (physics.shrinkStiffness.differsFrom(defPhys.shrinkStiffness)) count++
     if (physics.dropletElasticity.differsFrom(defPhys.dropletElasticity)) count++
     if (physics.dockingShrinkThreshold.differsFrom(defPhys.dockingShrinkThreshold)) count++
+    if (physics.platterActivationDurationMillis != defPhys.platterActivationDurationMillis) count++
 
     if (dimensions.indicatorActiveHeightScale.differsFrom(defDim.indicatorActiveHeightScale)) count++
     if (dimensions.indicatorActiveWidthScale.differsFrom(defDim.indicatorActiveWidthScale)) count++
@@ -151,6 +152,11 @@ fun buildDiffConfigJson(
             list.add("    \"$key\": $cur")
         }
     }
+    fun addNullableInt(list: MutableList<String>, key: String, cur: Int?, def: Int?) {
+        if (cur != def && cur != null) {
+            list.add("    \"$key\": $cur")
+        }
+    }
 
     addDp(physEntries, "maxOverhang", physics.maxOverhang, defPhys.maxOverhang)
     addFloat(physEntries, "overhangResistance", physics.overhangResistance, defPhys.overhangResistance)
@@ -177,6 +183,12 @@ fun buildDiffConfigJson(
     addFloat(physEntries, "shrinkStiffness", physics.shrinkStiffness, defPhys.shrinkStiffness)
     addFloat(physEntries, "dropletElasticity", physics.dropletElasticity, defPhys.dropletElasticity)
     addFloat(physEntries, "dockingShrinkThreshold", physics.dockingShrinkThreshold, defPhys.dockingShrinkThreshold)
+    addNullableInt(
+        physEntries,
+        "platterActivationDurationMillis",
+        physics.platterActivationDurationMillis,
+        defPhys.platterActivationDurationMillis
+    )
 
     addFloat(dimEntries, "indicatorActiveHeightScale", dimensions.indicatorActiveHeightScale, defDim.indicatorActiveHeightScale)
     addFloat(dimEntries, "indicatorActiveWidthScale", dimensions.indicatorActiveWidthScale, defDim.indicatorActiveWidthScale)

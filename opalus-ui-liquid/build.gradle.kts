@@ -1,5 +1,5 @@
 group = "io.github.opalusui"
-version = "0.2.5"
+version = "0.2.6"
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
@@ -57,7 +57,9 @@ android {
 mavenPublishing {
     publishToMavenCentral()
 
-    signAllPublications()
+    if (project.hasProperty("signingInMemoryKey") || project.hasProperty("signing.keyId")) {
+        signAllPublications()
+    }
     coordinates(group.toString(), "opalus-ui-liquid", version.toString())
     pom {
         name.set("Opalus UI Liquid")

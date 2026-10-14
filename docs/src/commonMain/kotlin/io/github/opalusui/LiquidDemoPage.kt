@@ -28,11 +28,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +53,9 @@ import io.github.opalusui.opalus.ui.liquid.LiquidTabBarDefaults
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBarDimensions
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBarEvents
 import io.github.opalusui.opalus.ui.liquid.LiquidTabItem
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 @Composable
 fun LiquidDemoPage(isDarkTheme: Boolean) {
@@ -59,6 +65,7 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
     var selectedTab2 by remember { mutableStateOf(0) }
     val tabs2 = remember { listOf("Dashboard", "Analytics", "Settings") }
     val eventLogState = remember { mutableStateOf("Ready (Idle)") }
+    val eventLogWriter = rememberDemoEventLogWriter(eventLogState)
 
     var physics by remember { mutableStateOf(LiquidTabBarDefaults.physics()) }
     var optics by remember {
@@ -209,18 +216,24 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                                 .height(if (isMobile) 400.dp else 480.dp)
                                 .clip(RoundedCornerShape(20.dp))
                                 .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(20.dp))
-                                .background(Color(0xFF0B0F17)),
-                            contentAlignment = Alignment.BottomCenter
+                                .background(Color(0xFF0B0F17))
                         ) {
-                    // 1. Long Scrollable Reference Gallery
-                    Column(
+                    // Bound the recording layer to the fixed viewport. This
+                    // keeps the WASM offscreen surface independent of the
+                    // scrollable gallery's content extent.
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .layerBackdrop(playgroundBackdrop)
-                            .verticalScroll(rememberScrollState())
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        // 1. Long Scrollable Reference Gallery
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
                         ArtworkTile(
                             tag = "SPECTRUM I",
                             title = "PACIFIC SUNSET GRADIENT",
@@ -274,12 +287,14 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                         }
 
                         Spacer(modifier = Modifier.height(96.dp))
+                        }
                     }
 
                     // 2. Suspended Floating LiquidTabBar
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
                             .padding(bottom = 24.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -389,31 +404,31 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                             events = remember {
                                 LiquidTabBarEvents(
                                     onDropletActivated = { index ->
-                                        eventLogState.value = "onDropletActivated(index = $index)"
+                                        eventLogWriter.write("onDropletActivated(index = $index)")
                                     },
                                     onDropletDeactivated = { finalIndex ->
-                                        eventLogState.value = "onDropletDeactivated(finalIndex = $finalIndex)"
+                                        eventLogWriter.write("onDropletDeactivated(finalIndex = $finalIndex)")
                                     },
                                     onTabCrossed = { from, to ->
-                                        eventLogState.value = "onTabCrossed(from = $from, to = $to)"
+                                        eventLogWriter.write("onTabCrossed(from = $from, to = $to)")
                                     },
                                     onSlotHovered = { slot ->
-                                        eventLogState.value = "onSlotHovered(slot = $slot)"
+                                        eventLogWriter.write("onSlotHovered(slot = $slot)")
                                     },
                                     onBoundaryReached = { edge ->
-                                        eventLogState.value = "onBoundaryReached(edge = $edge)"
+                                        eventLogWriter.write("onBoundaryReached(edge = $edge)")
                                     },
                                     onMaxOverhangReached = { edge ->
-                                        eventLogState.value = "onMaxOverhangReached(edge = $edge)"
+                                        eventLogWriter.write("onMaxOverhangReached(edge = $edge)")
                                     },
                                     onBoundaryPull = { edge, ratio ->
-                                        eventLogState.value = "onBoundaryPull(edge = $edge, ratio = ${((ratio * 100).toInt())}%)"
+                                        eventLogWriter.writeBoundaryPull(edge, ratio)
                                     },
                                     onDockingStarted = { target ->
-                                        eventLogState.value = "onDockingStarted(target = $target)"
+                                        eventLogWriter.write("onDockingStarted(target = $target)")
                                     },
                                     onDockingSettled = { settled ->
-                                        eventLogState.value = "onDockingSettled(settled = $settled)"
+                                        eventLogWriter.write("onDockingSettled(settled = $settled)")
                                     }
                                 )
                             },
@@ -486,7 +501,9 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
     events: LiquidTabBarEvents = LiquidTabBarDefaults.events(),
     state: LiquidTabBarState = rememberLiquidTabBarState(selectedTabIndex, items.size, physics, events),
     inactiveItem: @Composable (index: Int, item: T) -> Unit,
-    activeItem: @Composable (index: Int, item: T) -> Unit = inactiveItem
+    activeItem: @Composable (index: Int, item: T) -> Unit = inactiveItem,
+    barShape: Shape = Capsule(),
+    indicatorShape: Shape = Capsule()
 )""",
             description = "The primary entrypoint composable for the iOS 27 suspended fluid glass tab bar. Coordinates the 3-layer optical pipeline: the physical platter base, the 100% transparent offscreen active buttons layer, and the top 3D convex droplet lens. Handles low-level drag gestures with pointer down snapping and elastic rubber-band resistance.",
             tips = "TIP: For maximum visual fidelity, wrap the underlying scrollable page UI with `Modifier.layerBackdrop(backdrop)` and pass that backdrop instance into `LiquidTabBar(backdrop = backdrop)`. Place the tab bar inside a `Box` with `Alignment.BottomCenter`.",
@@ -502,7 +519,9 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                 ParamItem("events", "LiquidTabBarEvents", "Defaults.events()", "Lifecycle event listeners for pointer activation, tab crossing, boundary pulling, and docking settlement."),
                 ParamItem("state", "LiquidTabBarState", "rememberState()", "State machine tracking touch pointer position, velocity, and animated droplet translation."),
                 ParamItem("inactiveItem", "@Composable (Int, T)", "Required", "Slot Composable for unselected tabs; rendered inside platter with anti-ghosting difference cutout."),
-                ParamItem("activeItem", "@Composable (Int, T)", "inactiveItem", "Slot Composable for selected tabs; rendered onto offscreen transparent layer and magnified by lens.")
+                ParamItem("activeItem", "@Composable (Int, T)", "inactiveItem", "Slot Composable for selected tabs; rendered onto offscreen transparent layer and magnified by lens."),
+                ParamItem("barShape", "Shape", "Capsule()", "Shape of the bottom bar body. RoundedCornerShape and other Compose shapes are supported; unsupported shapes automatically skip only the lens shader."),
+                ParamItem("indicatorShape", "Shape", "Capsule()", "Shape of the inactive/active droplet indicator. The same shape is used for the inactive text cutout and animated border.")
             ),
             codeExample = """val pageBackdrop = rememberLayerBackdrop()
 var selectedIndex by remember { mutableStateOf(0) }
@@ -530,6 +549,8 @@ Box(modifier = Modifier.fillMaxSize()) {
             activeItemColor = MaterialTheme.colorScheme.primary
         ),
         optics = LiquidTabBarDefaults.optics(chromaticAberration = true),
+        barShape = RoundedCornerShape(22.dp),
+        indicatorShape = RoundedCornerShape(16.dp),
         modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
         inactiveItem = { _, item -> LiquidTabItem(label = { Text(item) }) },
         activeItem = { _, item -> LiquidTabItem(label = { Text(item, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) }) }
@@ -751,7 +772,8 @@ val customOptics = LiquidTabBarDefaults.optics(
     val shrinkDampingRatio: Float = 0.55f,
     val shrinkStiffness: Float = 150f,
     val dropletElasticity: Float = 1.0f,
-    val dockingShrinkThreshold: Float = 0.20f
+    val dockingShrinkThreshold: Float = 0.20f,
+    val platterActivationDurationMillis: Int? = null
 )""",
             description = "Defines the physical kinematics governing drag damping, spring stiffness, rubber-band resistance at container borders, grow/shrink speeds, docking inertia deviation, and droplet squash-and-stretch elasticity.",
             parameters = listOf(
@@ -774,7 +796,8 @@ val customOptics = LiquidTabBarDefaults.optics(
                 ParamItem("growDampingRatio / growStiffness", "Float", "0.45f / 1470f", "High-speed snappy expansion dynamics with liquid surface tension bounce."),
                 ParamItem("shrinkDampingRatio / shrinkStiffness", "Float", "0.55f / 150f", "Soft, gradual easing dynamics when settling into a docked slot with elastic rebound."),
                 ParamItem("dropletElasticity", "Float", "1.0f", "Controls settling duration and harmonic jelly bounce dynamics when returning from active state to inactive rest."),
-                ParamItem("dockingShrinkThreshold", "Float", "0.20f", "Distance threshold to target slot before the traveling droplet begins shrinking.")
+                ParamItem("dockingShrinkThreshold", "Float", "0.20f", "Distance threshold to target slot before the traveling droplet begins shrinking."),
+                ParamItem("platterActivationDurationMillis", "Int?", "null", "Optional duration override for the bottom bar body scale-up on pointer down. null preserves the default grow spring; other values use a timed easing.")
             ),
             codeExample = """val fluidPhysics = LiquidTabBarDefaults.physics(
     dockingDampingRatio = 0.90f,
@@ -927,6 +950,67 @@ Box {
         )
     }
 }
+}
+
+private class DemoEventLogWriter(
+    private val state: MutableState<String>,
+    private val scope: CoroutineScope
+) {
+    private var lastValue: String = state.value
+    private var pendingValue: String? = null
+    private var pendingBoundaryEdge: LiquidBoundaryEdge? = null
+    private var pendingBoundaryPercent: Int = 0
+    private var publishJob: Job? = null
+
+    fun write(value: String) {
+        pendingBoundaryEdge = null
+        schedule(value)
+    }
+
+    fun writeBoundaryPull(edge: LiquidBoundaryEdge, ratio: Float) {
+        pendingValue = null
+        pendingBoundaryEdge = edge
+        pendingBoundaryPercent = (ratio * 100f).toInt()
+        schedule()
+    }
+
+    private fun schedule(value: String? = null) {
+        // Event callbacks run inside pointer dispatch. Publish on the next
+        // frame so the demo log cannot trigger a page recomposition in the
+        // same frame that starts or moves the fluid gesture.
+        if (value != null) {
+            pendingValue = value
+        }
+        if (publishJob?.isActive == true) return
+        publishJob = scope.launch {
+            withFrameNanos { }
+            val valueToPublish = pendingValue
+            val boundaryEdge = pendingBoundaryEdge
+            val boundaryPercent = pendingBoundaryPercent
+            pendingValue = null
+            pendingBoundaryEdge = null
+            publishJob = null
+            when {
+                boundaryEdge != null -> commit(
+                    "onBoundaryPull(edge = $boundaryEdge, ratio = ${boundaryPercent}%)"
+                )
+                valueToPublish != null -> commit(valueToPublish)
+            }
+        }
+    }
+
+    private fun commit(value: String) {
+        if (value != lastValue) {
+            lastValue = value
+            state.value = value
+        }
+    }
+}
+
+@Composable
+private fun rememberDemoEventLogWriter(state: MutableState<String>): DemoEventLogWriter {
+    val scope = rememberCoroutineScope()
+    return remember(state, scope) { DemoEventLogWriter(state, scope) }
 }
 
 @Composable

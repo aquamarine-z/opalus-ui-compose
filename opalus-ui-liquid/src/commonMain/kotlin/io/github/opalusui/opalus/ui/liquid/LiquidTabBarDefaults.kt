@@ -103,7 +103,10 @@ data class LiquidTabBarPhysics(
     val dropletElasticity: Float = 1.0f,
 
     // 吸附 item 时开始变小的距离阈值 (以 Tab 槽位跨度归一化单位计)
-    val dockingShrinkThreshold: Float = 0.20f
+    val dockingShrinkThreshold: Float = 0.20f,
+
+    // 底盘按下放大时长覆盖。null 保留原有 grow spring，避免改变默认动效。
+    val platterActivationDurationMillis: Int? = null
 ) {
     val platterActiveScale: Float
         get() = (platterActiveScaleX + platterActiveScaleY) / 2f
@@ -224,7 +227,8 @@ object LiquidTabBarDefaults {
         shrinkDampingRatio: Float = 0.55f,
         shrinkStiffness: Float = 150f,
         dropletElasticity: Float = 1.0f,
-        dockingShrinkThreshold: Float = 0.20f
+        dockingShrinkThreshold: Float = 0.20f,
+        platterActivationDurationMillis: Int? = null
     ): LiquidTabBarPhysics = LiquidTabBarPhysics(
         maxOverhang = maxOverhang,
         overhangResistance = overhangResistance,
@@ -251,7 +255,8 @@ object LiquidTabBarDefaults {
         shrinkDampingRatio = shrinkDampingRatio,
         shrinkStiffness = shrinkStiffness,
         dropletElasticity = dropletElasticity,
-        dockingShrinkThreshold = dockingShrinkThreshold
+        dockingShrinkThreshold = dockingShrinkThreshold,
+        platterActivationDurationMillis = platterActivationDurationMillis
     )
 
     /**

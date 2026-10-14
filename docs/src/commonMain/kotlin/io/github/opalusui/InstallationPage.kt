@@ -27,14 +27,14 @@ fun InstallationPage() {
             M3SectionHeader(
                 title = "Installation & Gradle Setup",
                 subtitle = "Declare Opalus UI modules in your Compose Multiplatform project to start building with fluid glass components and suspend-driven dialogs.",
-                badge = "v0.2.5"
+                badge = "v0.2.6"
             )
 
             // Version Catalog
             M3CodeBlock(
                 title = "gradle/libs.versions.toml",
                 code = """[versions]
-opalusUi = "0.2.5"
+opalusUi = "0.2.6"
 kyant-backdrop = "2.0.1"
 kyant-shapes = "1.2.1"
 

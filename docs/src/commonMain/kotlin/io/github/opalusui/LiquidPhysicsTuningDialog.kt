@@ -162,6 +162,16 @@ private val physicsParamDocs = mapOf(
         decreaseEffect = "调低（低于 1000f）：按下时光感和水珠缓慢膨胀延展，响应略显迟钝软绵。",
         recommendation = "建议 1200f ~ 1600f（默认 1470f）。"
     ),
+    "platterActivationDurationMillis" to TuningParamInfo(
+        id = "platterActivationDurationMillis",
+        name = "platterActivationDurationMillis",
+        label = "底盘激活放大时长",
+        category = "水珠展开与收拢弹性",
+        explanation = "控制手指按下后底部 bar 本体从 1x 放大到 platterActiveScale 的持续时间。",
+        increaseEffect = "调高：底部 bar 放大过程更慢、更容易观察到尺寸变化。",
+        decreaseEffect = "调低：底部 bar 更快完成放大，响应更直接。",
+        recommendation = "0ms 表示保留默认 spring；若使用固定时长，建议 80ms ~ 220ms。"
+    ),
     "dragDampingRatio" to TuningParamInfo(
         id = "dragDampingRatio",
         name = "dragDampingRatio",
@@ -1039,6 +1049,26 @@ fun LiquidPhysicsTuningDialog(
                             onHover = { activeParamId = "growStiffness" },
                             onValueChange = {
                                 onPhysicsChange(currentPhysics.copy(growStiffness = it))
+                            }
+                        )
+
+                        ParamSliderItem(
+                            id = "platterActivationDurationMillis",
+                            name = "platterActivationDurationMillis",
+                            label = "底盘激活放大时长 (0 = 默认 spring)",
+                            value = currentPhysics.platterActivationDurationMillis?.toFloat() ?: 0f,
+                            valueRange = 0f..500f,
+                            format = { if (it < 1f) "spring" else "${it.roundToInt()}ms" },
+                            recommendation = "0 = null（默认 spring）；建议固定时长 80ms ~ 220ms",
+                            isActive = activeParamId == "platterActivationDurationMillis",
+                            onHover = { activeParamId = "platterActivationDurationMillis" },
+                            onValueChange = {
+                                onPhysicsChange(
+                                    currentPhysics.copy(
+                                        platterActivationDurationMillis =
+                                            if (it < 1f) null else it.roundToInt()
+                                    )
+                                )
                             }
                         )
 

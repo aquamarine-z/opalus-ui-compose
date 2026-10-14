@@ -14,9 +14,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.util.fastCoerceIn
@@ -46,6 +50,8 @@ internal fun <T> LiquidTabBarPlatter(
     state: LiquidTabBarState,
     tabWidth: Float,
     isLtr: Boolean,
+    barShape: Shape,
+    indicatorShape: Shape,
     modifier: Modifier = Modifier,
     inactiveItem: @Composable (index: Int, item: T) -> Unit
 ) {
@@ -54,30 +60,43 @@ internal fun <T> LiquidTabBarPlatter(
             .layerBackdrop(dockBackdrop)
             .drawBackdrop(
                 backdrop = backdrop,
-                shape = { Capsule() },
+                shape = { barShape },
                 effects = {
                     blur(optics.platterBlur.toPx())
-                    lens(
-                        refractionHeight = optics.platterRefractionHeight.toPx(),
-                        refractionAmount = optics.platterRefractionAmount.toPx(),
-                        depthEffect = true,
-                        chromaticAberration = optics.chromaticAberration
-                    )
+                    if (barShape.supportsLiquidLens()) {
+                        lens(
+                            refractionHeight = optics.platterRefractionHeight.toPx(),
+                            refractionAmount = optics.platterRefractionAmount.toPx(),
+                            depthEffect = true,
+                            chromaticAberration = optics.chromaticAberration
+                        )
+                    }
                 },
                 highlight = {
                     Highlight.Default.copy(alpha = optics.platterHighlightAlpha)
                 },
                 onDrawSurface = {
-                    drawRoundRect(
-                        color = colors.platterColor,
-                        cornerRadius = CornerRadius(size.height / 2f, size.height / 2f)
-                    )
+                    if (barShape is Capsule) {
+                        drawRoundRect(
+                            color = colors.platterColor,
+                            cornerRadius = CornerRadius(size.height / 2f, size.height / 2f)
+                        )
+                    } else {
+                        val surfaceOutline = barShape.createOutline(size, layoutDirection, this)
+                        val surfacePath = Path().apply {
+                            addOutline(surfaceOutline)
+                        }
+                        drawPath(
+                            path = surfacePath,
+                            color = colors.platterColor,
+                        )
+                    }
                 }
             )
             .border(
                 width = dimensions.borderWidth,
                 color = colors.platterBorderColor,
-                shape = Capsule()
+                shape = barShape
             )
             .height(dimensions.platterHeight)
             .fillMaxWidth()
@@ -133,16 +152,30 @@ internal fun <T> LiquidTabBarPlatter(
                     val bottom = centerY + halfHeight
 
                     dropletPath.reset()
-                    dropletPath.addRoundRect(
-                        RoundRect(
-                            left = left,
-                            top = top,
-                            right = right,
-                            bottom = bottom,
-                            radiusX = halfHeight,
-                            radiusY = halfHeight
+                    if (indicatorShape is Capsule) {
+                        dropletPath.addRoundRect(
+                            RoundRect(
+                                left = left,
+                                top = top,
+                                right = right,
+                                bottom = bottom,
+                                radiusX = halfHeight,
+                                radiusY = halfHeight
+                            )
                         )
-                    )
+                    } else {
+                        val dropletSize = Size(
+                            width = (right - left).coerceAtLeast(0f),
+                            height = (bottom - top).coerceAtLeast(0f)
+                        )
+                        val dropletOutline = indicatorShape.createOutline(
+                            size = dropletSize,
+                            layoutDirection = layoutDirection,
+                            density = this
+                        )
+                        dropletPath.addOutline(dropletOutline)
+                        dropletPath.translate(Offset(left, top))
+                    }
 
                     clipPath(dropletPath, clipOp = ClipOp.Difference) {
                         this@drawWithContent.drawContent()

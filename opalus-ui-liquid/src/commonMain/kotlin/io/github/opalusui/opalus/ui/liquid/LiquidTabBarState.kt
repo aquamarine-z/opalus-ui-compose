@@ -312,8 +312,9 @@ fun rememberLiquidTabBarState(
         state.updateEvents(events)
     }
 
-    LaunchedEffect(state, selectedTabIndex) {
-        snapshotFlow { selectedTabIndex() }
+    val selectedTabIndexState = rememberUpdatedState(selectedTabIndex)
+    LaunchedEffect(state) {
+        snapshotFlow { selectedTabIndexState.value() }
             .collectLatest { targetIndex ->
                 if (targetIndex != state.currentIndex) {
                     state.animateToTab(targetIndex)

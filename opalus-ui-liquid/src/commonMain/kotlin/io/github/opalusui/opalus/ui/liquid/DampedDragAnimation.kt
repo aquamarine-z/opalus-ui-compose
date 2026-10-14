@@ -1,10 +1,14 @@
 package io.github.opalusui.opalus.ui.liquid
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.SpringSpec
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.MutatorMutex
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -12,7 +16,6 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -24,7 +27,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 import kotlin.math.roundToInt
-import kotlin.time.TimeSource
 
 class DampedDragAnimation(
     private val animationScope: CoroutineScope,
@@ -64,10 +66,20 @@ class DampedDragAnimation(
                 visibilityThreshold = 0.001f
             )
         }
-    private val scaleXGrowSpec: SpringSpec<Float>
-        get() = spring(physics.growDampingRatio, physics.growStiffness * 0.9f, 0.001f)
-    private val scaleYGrowSpec: SpringSpec<Float>
-        get() = spring(physics.growDampingRatio, physics.growStiffness * 0.9f, 0.001f)
+    private val scaleXGrowSpec: AnimationSpec<Float>
+        get() = physics.platterActivationDurationMillis?.let { durationMillis ->
+            tween(
+                durationMillis = durationMillis.coerceAtLeast(1),
+                easing = FastOutSlowInEasing
+            )
+        } ?: spring(physics.growDampingRatio, physics.growStiffness * 0.9f, 0.001f)
+    private val scaleYGrowSpec: AnimationSpec<Float>
+        get() = physics.platterActivationDurationMillis?.let { durationMillis ->
+            tween(
+                durationMillis = durationMillis.coerceAtLeast(1),
+                easing = FastOutSlowInEasing
+            )
+        } ?: spring(physics.growDampingRatio, physics.growStiffness * 0.9f, 0.001f)
     private val scaleXShrinkSpec: SpringSpec<Float>
         get() = spring(physics.shrinkDampingRatio, physics.shrinkStiffness, 0.001f)
     private val scaleYShrinkSpec: SpringSpec<Float>
@@ -88,16 +100,20 @@ class DampedDragAnimation(
 
     private val mutatorMutex = MutatorMutex()
 
-    private val velocityTracker = VelocityTracker()
-    private val timeMark = TimeSource.Monotonic.markNow()
+    // Drag simulation is already integrated manually. Keeping its two values in
+    // primitive snapshot states avoids invoking Animatable's mutator machinery
+    // twice for every pointer frame on WASM.
+    private var dragValue by mutableFloatStateOf(initialValue)
+    private var dragVelocity by mutableFloatStateOf(0f)
+    private var dragFrameActive by mutableStateOf(false)
 
-    val value: Float get() = valueAnimation.value
+    val value: Float get() = if (dragFrameActive) dragValue else valueAnimation.value
     val progress: Float get() = (value - valueRange.start) / (valueRange.endInclusive - valueRange.start)
-    val targetValue: Float get() = valueAnimation.targetValue
+    val targetValue: Float get() = if (dragFrameActive) dragTargetValue else valueAnimation.targetValue
     val pressProgress: Float get() = pressProgressAnimation.value
     val scaleX: Float get() = scaleXAnimation.value
     val scaleY: Float get() = scaleYAnimation.value
-    val velocity: Float get() = velocityAnimation.value
+    val velocity: Float get() = if (dragFrameActive) dragVelocity else velocityAnimation.value
     val jelly: Float get() = jellyAnimation.value
 
     val modifier: Modifier = Modifier.pointerInput(Unit) {
@@ -124,12 +140,14 @@ class DampedDragAnimation(
     private var animationToken: Long = 0L
 
     fun press() {
-        velocityTracker.resetTracking()
         snapJob?.cancel()
         pressJob?.cancel()
         dragJob?.cancel()
         isDragging = true
         currentSimVelocity = 0f
+        dragValue = valueAnimation.value
+        dragVelocity = 0f
+        dragFrameActive = true
         val token = ++animationToken
         pressJob = animationScope.launch {
             launch {
@@ -158,7 +176,7 @@ class DampedDragAnimation(
         if (dragJob != null && dragJob!!.isActive) return
         dragJob = animationScope.launch {
             var lastFrameTimeNanos = 0L
-            var currentPos = valueAnimation.value
+            var currentPos = dragValue
 
             simulation@ while (isActive && isDragging) {
                 val nowNanos = withFrameNanos { it }
@@ -173,7 +191,12 @@ class DampedDragAnimation(
                 val subSteps = 4
                 val subDt = dt / subSteps
                 val target = dragTargetValue
+                val currentPhysics = physics
+                val minBound = valueRange.start
+                val maxBound = valueRange.endInclusive
                 val maxTab = (tabsCount - 1).toFloat().coerceAtLeast(0f)
+                val fixedBounceSpeed = currentPhysics.overhangBounceAmplitude *
+                    currentPhysics.dropletElasticity.coerceIn(0.4f, 1.6f)
 
                 for (i in 0 until subSteps) {
                     // 当处于边界伸缩区时，平滑过渡到回正刚度与阻尼，回正速度更柔和舒缓
@@ -183,8 +206,8 @@ class DampedDragAnimation(
                         else -> 0f
                     }
                     val blend = (overhangDepth * 2.5f).coerceIn(0f, 1f)
-                    val k = (1f - blend) * physics.dragStiffness + blend * physics.overhangSettlingStiffness
-                    val zeta = (1f - blend) * physics.dragDampingRatio + blend * physics.overhangSettlingDampingRatio
+                    val k = (1f - blend) * currentPhysics.dragStiffness + blend * currentPhysics.overhangSettlingStiffness
+                    val zeta = (1f - blend) * currentPhysics.dragDampingRatio + blend * currentPhysics.overhangSettlingDampingRatio
                     val c = 2f * zeta * kotlin.math.sqrt(k)
 
                     val fSpring = k * (target - currentPos)
@@ -194,10 +217,6 @@ class DampedDragAnimation(
                     currentPos += currentSimVelocity * subDt
 
                     // 严密物理边界碰撞约束：定值反弹冲量与固定缓冲限位（拉过之后轻微弹一下，回正更慢，且弹性幅度严格与手速解耦）
-                    val minBound = valueRange.start
-                    val maxBound = valueRange.endInclusive
-                    val fixedBounceSpeed = physics.overhangBounceAmplitude * physics.dropletElasticity.coerceIn(0.4f, 1.6f)
-
                     if (currentPos < minBound) {
                         currentPos = minBound
                         if (currentSimVelocity < -0.05f) {
@@ -217,20 +236,18 @@ class DampedDragAnimation(
                     }
                 }
 
-                currentPos = currentPos.coerceIn(valueRange)
-                valueAnimation.snapTo(currentPos)
-                velocityAnimation.snapTo(currentSimVelocity)
-
-                velocityTracker.addPosition(
-                    timeMark.elapsedNow().inWholeMilliseconds,
-                    Offset(currentPos, 0f)
-                )
+                currentPos = currentPos.coerceIn(minBound, maxBound)
+                dragValue = currentPos
+                dragVelocity = currentSimVelocity
 
                 if (abs(currentPos - target) < 0.0005f && abs(currentSimVelocity) < 0.005f) {
                     currentPos = target
                     currentSimVelocity = 0f
                     valueAnimation.snapTo(target)
                     velocityAnimation.snapTo(0f)
+                    dragValue = target
+                    dragVelocity = 0f
+                    dragFrameActive = false
                     // Stop scheduling frames while a stationary pointer keeps the
                     // same target. A later pointer move starts the simulation again.
                     isDragging = false
@@ -241,6 +258,11 @@ class DampedDragAnimation(
     }
 
     fun updateValue(value: Float) {
+        if (!dragFrameActive) {
+            dragValue = valueAnimation.value
+            dragVelocity = 0f
+            dragFrameActive = true
+        }
         dragTargetValue = value.coerceIn(valueRange)
         isDragging = true
         startDragSimulationIfNeeded()
@@ -256,6 +278,13 @@ class DampedDragAnimation(
 
         snapJob = animationScope.launch {
             try {
+                if (dragFrameActive) {
+                    // Transfer the current pointer position to the existing
+                    // Animatable once, then keep the original docking springs.
+                    valueAnimation.snapTo(dragValue)
+                    velocityAnimation.snapTo(currentSimVelocity)
+                    dragFrameActive = false
+                }
                 coroutineScope {
                     launch { scaleXAnimation.animateTo(initialScale, scaleXShrinkSpec) }
                     launch { scaleYAnimation.animateTo(initialScale, scaleYShrinkSpec) }
@@ -331,20 +360,4 @@ class DampedDragAnimation(
         }
     }
 
-    private var velocityJob: Job? = null
-
-    private fun updateVelocity() {
-        velocityTracker.addPosition(
-            timeMark.elapsedNow().inWholeMilliseconds,
-            Offset(value, 0f)
-        )
-        val rangeSpan = (valueRange.endInclusive - valueRange.start).coerceAtLeast(0.001f)
-        val targetVelocity = velocityTracker.calculateVelocity().x / rangeSpan
-        if (targetVelocity.isFinite()) {
-            velocityJob?.cancel()
-            velocityJob = animationScope.launch {
-                velocityAnimation.animateTo(targetVelocity, velocityAnimationSpec)
-            }
-        }
-    }
 }

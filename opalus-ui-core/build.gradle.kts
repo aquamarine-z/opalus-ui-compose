@@ -1,5 +1,5 @@
 group = "io.github.opalusui"
-version = "0.2.5"
+version = "0.2.6"
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     // 如果你希望纯 Android 项目也能直接依赖这个库（生成 AAR），可以取消下面这行的注释
@@ -69,7 +69,9 @@ android {
 mavenPublishing {
     publishToMavenCentral()
 
-    signAllPublications()
+    if (project.hasProperty("signingInMemoryKey") || project.hasProperty("signing.keyId")) {
+        signAllPublications()
+    }
     coordinates(group.toString(), "opalus-ui-core", version.toString())
     pom {
         name.set("Opalus UI Core")
