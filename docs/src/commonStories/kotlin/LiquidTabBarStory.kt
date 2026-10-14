@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.kyant.shapes.Capsule
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBar
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBarDefaults
 import io.github.opalusui.opalus.ui.liquid.LiquidTabItem
@@ -31,7 +32,8 @@ val `LiquidTabBar Rounded Rectangle Shape` by story {
         var selectedTabIndex by remember { mutableStateOf(0) }
         val tabs = remember { listOf("Home", "Search", "Profile") }
         val barShape = remember { RoundedCornerShape(22.dp) }
-        val indicatorShape = remember { RoundedCornerShape(16.dp) }
+        val inactiveIndicatorShape = remember { RoundedCornerShape(16.dp) }
+        val activeIndicatorShape = remember { Capsule() }
 
         Box(
             modifier = Modifier
@@ -49,7 +51,8 @@ val `LiquidTabBar Rounded Rectangle Shape` by story {
                     platterActivationDurationMillis = 160
                 ),
                 barShape = barShape,
-                indicatorShape = indicatorShape,
+                inactiveIndicatorShape = inactiveIndicatorShape,
+                activeIndicatorShape = activeIndicatorShape,
                 modifier = Modifier
                     .widthIn(max = 420.dp)
                     .fillMaxWidth(),

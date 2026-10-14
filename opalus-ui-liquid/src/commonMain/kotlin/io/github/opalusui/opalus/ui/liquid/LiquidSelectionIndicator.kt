@@ -52,14 +52,19 @@ internal fun LiquidSelectionIndicator(
     tabWidth: Float,
     tabsCount: Int,
     isLtr: Boolean,
-    indicatorShape: Shape,
+    inactiveIndicatorShape: Shape,
+    activeIndicatorShape: Shape,
     modifier: Modifier = Modifier
 ) {
     val combinedBackdrop = rememberCombinedBackdrop(backdrop, dockBackdrop, activeButtonsBackdrop)
-    val lensSupported = indicatorShape.supportsLiquidLens()
-    var shaderWarmupVisible by remember(optics.chromaticAberration, indicatorShape) { mutableStateOf(true) }
+    val lensSupported = activeIndicatorShape.supportsLiquidLens()
+    var shaderWarmupVisible by remember(
+        optics.chromaticAberration,
+        inactiveIndicatorShape,
+        activeIndicatorShape
+    ) { mutableStateOf(true) }
 
-    LaunchedEffect(optics.chromaticAberration, indicatorShape) {
+    LaunchedEffect(optics.chromaticAberration, inactiveIndicatorShape, activeIndicatorShape) {
         // Let the real indicator node render its lens once before interaction.
         // Backdrop keeps its RuntimeShader cache per drawBackdrop node, so a
         // separate hidden warmup node would not remove the first-touch hitch.
@@ -85,7 +90,16 @@ internal fun LiquidSelectionIndicator(
         modifier = indicatorModifier
             .drawBackdrop(
                 backdrop = combinedBackdrop,
-                shape = { indicatorShape },
+                shape = {
+                    // Keep the original idle geometry until the droplet is
+                    // actually activated. The active shape then takes over
+                    // without adding a recomposition to pointer frames.
+                    if (shaderWarmupVisible || state.pressProgress > 0.001f) {
+                        activeIndicatorShape
+                    } else {
+                        inactiveIndicatorShape
+                    }
+                },
                 effects = {
                     val visualProgress = state.pressProgress.coerceIn(0f, 1f)
                     val effectProgress = if (shaderWarmupVisible) 1f else visualProgress
@@ -183,7 +197,12 @@ internal fun LiquidSelectionIndicator(
                         width = (size.width - strokeWidth).coerceAtLeast(0f),
                         height = (size.height - strokeWidth).coerceAtLeast(0f)
                     )
-                    if (indicatorShape is Capsule) {
+                    val currentShape = if (state.pressProgress > 0.001f) {
+                        activeIndicatorShape
+                    } else {
+                        inactiveIndicatorShape
+                    }
+                    if (currentShape is Capsule) {
                         drawRoundRect(
                             color = colors.indicatorBorderColor.copy(
                                 alpha = colors.indicatorBorderColor.alpha * alpha
@@ -194,7 +213,7 @@ internal fun LiquidSelectionIndicator(
                             style = Stroke(width = strokeWidth)
                         )
                     } else {
-                        val borderOutline = indicatorShape.createOutline(borderSize, layoutDirection, this)
+                        val borderOutline = currentShape.createOutline(borderSize, layoutDirection, this)
                         val borderPath = Path().apply {
                             addOutline(borderOutline)
                             translate(Offset(inset, inset))

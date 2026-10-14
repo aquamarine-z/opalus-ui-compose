@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.shapes.Capsule
 import io.github.opalusui.opalus.ui.liquid.LiquidBoundaryEdge
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBar
 import io.github.opalusui.opalus.ui.liquid.LiquidTabBarDefaults
@@ -66,6 +67,8 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
     val tabs2 = remember { listOf("Dashboard", "Analytics", "Settings") }
     var selectedTab3 by remember { mutableStateOf(0) }
     val tabs3 = remember { listOf("Home", "Search", "Profile") }
+    var useRoundedInactiveIndicatorDemo by remember { mutableStateOf(true) }
+    var useRoundedActiveIndicatorDemo by remember { mutableStateOf(false) }
     val eventLogState = remember { mutableStateOf("Ready (Idle)") }
     val eventLogWriter = rememberDemoEventLogWriter(eventLogState)
 
@@ -498,6 +501,39 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (useRoundedInactiveIndicatorDemo) {
+                        OutlinedButton(
+                            onClick = { useRoundedInactiveIndicatorDemo = false },
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Inactive: rounded")
+                        }
+                    } else {
+                        FilledTonalButton(
+                            onClick = { useRoundedInactiveIndicatorDemo = true },
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Inactive: capsule")
+                        }
+                    }
+                    if (useRoundedActiveIndicatorDemo) {
+                        FilledTonalButton(
+                            onClick = { useRoundedActiveIndicatorDemo = false },
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Active: rounded")
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = { useRoundedActiveIndicatorDemo = true },
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Active: capsule")
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(20.dp))
 
                 DisableSelection {
@@ -522,7 +558,16 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                                 platterActivationDurationMillis = 160
                             ),
                             barShape = RoundedCornerShape(22.dp),
-                            indicatorShape = RoundedCornerShape(16.dp),
+                            inactiveIndicatorShape = if (useRoundedInactiveIndicatorDemo) {
+                                RoundedCornerShape(16.dp)
+                            } else {
+                                Capsule()
+                            },
+                            activeIndicatorShape = if (useRoundedActiveIndicatorDemo) {
+                                RoundedCornerShape(16.dp)
+                            } else {
+                                Capsule()
+                            },
                             modifier = Modifier
                                 .widthIn(max = 420.dp)
                                 .fillMaxWidth(),
@@ -581,7 +626,9 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
     inactiveItem: @Composable (index: Int, item: T) -> Unit,
     activeItem: @Composable (index: Int, item: T) -> Unit = inactiveItem,
     barShape: Shape = Capsule(),
-    indicatorShape: Shape = Capsule()
+    indicatorShape: Shape = Capsule(),
+    inactiveIndicatorShape: Shape = indicatorShape,
+    activeIndicatorShape: Shape = indicatorShape
 )""",
             description = "The primary entrypoint composable for the iOS 27 suspended fluid glass tab bar. Coordinates the 3-layer optical pipeline: the physical platter base, the 100% transparent offscreen active buttons layer, and the top 3D convex droplet lens. Handles low-level drag gestures with pointer down snapping and elastic rubber-band resistance.",
             tips = "TIP: For maximum visual fidelity, wrap the underlying scrollable page UI with `Modifier.layerBackdrop(backdrop)` and pass that backdrop instance into `LiquidTabBar(backdrop = backdrop)`. Place the tab bar inside a `Box` with `Alignment.BottomCenter`.",
@@ -599,7 +646,9 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                 ParamItem("inactiveItem", "@Composable (Int, T)", "Required", "Slot Composable for unselected tabs; rendered inside platter with anti-ghosting difference cutout."),
                 ParamItem("activeItem", "@Composable (Int, T)", "inactiveItem", "Slot Composable for selected tabs; rendered onto offscreen transparent layer and magnified by lens."),
                 ParamItem("barShape", "Shape", "Capsule()", "Shape of the bottom bar body. RoundedCornerShape and other Compose shapes are supported; unsupported shapes automatically skip only the lens shader."),
-                ParamItem("indicatorShape", "Shape", "Capsule()", "Shape of the inactive/active droplet indicator. The same shape is used for the inactive text cutout and animated border.")
+                ParamItem("indicatorShape", "Shape", "Capsule()", "Legacy shared shape alias. When the state-specific shape parameters are omitted, this shape is used for both inactive and active states."),
+                ParamItem("inactiveIndicatorShape", "Shape", "indicatorShape", "Shape used while the droplet is inactive, including the inactive text cutout."),
+                ParamItem("activeIndicatorShape", "Shape", "indicatorShape", "Shape used while the droplet is pressed or being dragged, including the active lens and animated border.")
             ),
             codeExample = """val pageBackdrop = rememberLayerBackdrop()
 var selectedIndex by remember { mutableStateOf(0) }
@@ -628,7 +677,8 @@ Box(modifier = Modifier.fillMaxSize()) {
         ),
         optics = LiquidTabBarDefaults.optics(chromaticAberration = true),
         barShape = RoundedCornerShape(22.dp),
-        indicatorShape = RoundedCornerShape(16.dp),
+        inactiveIndicatorShape = RoundedCornerShape(16.dp),
+        activeIndicatorShape = Capsule(),
         modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
         inactiveItem = { _, item -> LiquidTabItem(label = { Text(item) }) },
         activeItem = { _, item -> LiquidTabItem(label = { Text(item, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) }) }

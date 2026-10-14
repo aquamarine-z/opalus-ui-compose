@@ -51,7 +51,8 @@ internal fun <T> LiquidTabBarPlatter(
     tabWidth: Float,
     isLtr: Boolean,
     barShape: Shape,
-    indicatorShape: Shape,
+    inactiveIndicatorShape: Shape,
+    activeIndicatorShape: Shape,
     modifier: Modifier = Modifier,
     inactiveItem: @Composable (index: Int, item: T) -> Unit
 ) {
@@ -151,8 +152,14 @@ internal fun <T> LiquidTabBarPlatter(
                     val top = centerY - halfHeight
                     val bottom = centerY + halfHeight
 
+                    val currentIndicatorShape = if (visualProgress > 0.001f) {
+                        activeIndicatorShape
+                    } else {
+                        inactiveIndicatorShape
+                    }
+
                     dropletPath.reset()
-                    if (indicatorShape is Capsule) {
+                    if (currentIndicatorShape is Capsule) {
                         dropletPath.addRoundRect(
                             RoundRect(
                                 left = left,
@@ -168,7 +175,7 @@ internal fun <T> LiquidTabBarPlatter(
                             width = (right - left).coerceAtLeast(0f),
                             height = (bottom - top).coerceAtLeast(0f)
                         )
-                        val dropletOutline = indicatorShape.createOutline(
+                        val dropletOutline = currentIndicatorShape.createOutline(
                             size = dropletSize,
                             layoutDirection = layoutDirection,
                             density = this

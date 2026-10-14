@@ -41,7 +41,9 @@ fun <T> LiquidTabBar(
     inactiveItem: @Composable (index: Int, item: T) -> Unit,
     activeItem: @Composable (index: Int, item: T) -> Unit = inactiveItem,
     barShape: Shape = Capsule(),
-    indicatorShape: Shape = Capsule()
+    indicatorShape: Shape = Capsule(),
+    inactiveIndicatorShape: Shape = indicatorShape,
+    activeIndicatorShape: Shape = indicatorShape
 ) {
     if (items.isEmpty()) return
 
@@ -139,7 +141,8 @@ fun <T> LiquidTabBar(
                     tabWidth = tabWidth,
                     isLtr = isLtr,
                     barShape = barShape,
-                    indicatorShape = indicatorShape,
+                    inactiveIndicatorShape = inactiveIndicatorShape,
+                    activeIndicatorShape = activeIndicatorShape,
                     inactiveItem = inactiveItem
                 )
 
@@ -167,7 +170,8 @@ fun <T> LiquidTabBar(
                     tabWidth = tabWidth,
                     tabsCount = items.size,
                     isLtr = isLtr,
-                    indicatorShape = indicatorShape
+                    inactiveIndicatorShape = inactiveIndicatorShape,
+                    activeIndicatorShape = activeIndicatorShape
                 )
             }
         }
@@ -191,7 +195,9 @@ fun LiquidTabBar(
     events: LiquidTabBarEvents = LiquidTabBarDefaults.events(),
     state: LiquidTabBarState = rememberLiquidTabBarState(selectedTabIndex, items.size, physics, events),
     barShape: Shape = Capsule(),
-    indicatorShape: Shape = Capsule()
+    indicatorShape: Shape = Capsule(),
+    inactiveIndicatorShape: Shape = indicatorShape,
+    activeIndicatorShape: Shape = indicatorShape
 ) {
     LiquidTabBar(
         items = items,
@@ -207,6 +213,8 @@ fun LiquidTabBar(
         state = state,
         barShape = barShape,
         indicatorShape = indicatorShape,
+        inactiveIndicatorShape = inactiveIndicatorShape,
+        activeIndicatorShape = activeIndicatorShape,
         inactiveItem = { _, item -> item.inactive() },
         activeItem = { _, item -> item.active() }
     )
