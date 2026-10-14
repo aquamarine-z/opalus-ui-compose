@@ -64,6 +64,8 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
 
     var selectedTab2 by remember { mutableStateOf(0) }
     val tabs2 = remember { listOf("Dashboard", "Analytics", "Settings") }
+    var selectedTab3 by remember { mutableStateOf(0) }
+    val tabs3 = remember { listOf("Home", "Search", "Profile") }
     val eventLogState = remember { mutableStateOf("Ready (Idle)") }
     val eventLogWriter = rememberDemoEventLogWriter(eventLogState)
 
@@ -473,6 +475,82 @@ fun LiquidDemoPage(isDarkTheme: Boolean) {
                         color = MaterialTheme.colorScheme.primary
                     )
                     LiquidTabBarEventLog(eventLogState)
+                }
+            }
+        }
+
+        // Demo 3: Custom rounded-rectangle geometry
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(modifier = Modifier.padding(if (isMobile) 18.dp else 24.dp)) {
+                Text(
+                    text = "Demo 3: Rounded Rectangle Shape",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "The bar and inactive droplet use independent Compose shapes while preserving the same interaction and fluid motion.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+
+                DisableSelection {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(Color(0xFF101318))
+                            .padding(vertical = 36.dp, horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LiquidTabBar(
+                            items = tabs3,
+                            selectedTabIndex = { selectedTab3 },
+                            onTabSelected = { index, _ -> selectedTab3 = index },
+                            colors = LiquidTabBarDefaults.colors(
+                                isDark = true,
+                                activeItemColor = Color(0xFF9ECAFF),
+                                inactiveItemColor = Color(0xFFCBD5E1)
+                            ),
+                            physics = LiquidTabBarDefaults.physics(
+                                platterActivationDurationMillis = 160
+                            ),
+                            barShape = RoundedCornerShape(22.dp),
+                            indicatorShape = RoundedCornerShape(16.dp),
+                            modifier = Modifier
+                                .widthIn(max = 420.dp)
+                                .fillMaxWidth(),
+                            inactiveItem = { _, item ->
+                                LiquidTabItem(
+                                    label = {
+                                        Text(
+                                            text = item,
+                                            fontSize = 12.sp,
+                                            color = Color(0xFFCBD5E1)
+                                        )
+                                    }
+                                )
+                            },
+                            activeItem = { _, item ->
+                                LiquidTabItem(
+                                    label = {
+                                        Text(
+                                            text = item,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF9ECAFF)
+                                        )
+                                    }
+                                )
+                            }
+                        )
+                    }
                 }
             }
         }
