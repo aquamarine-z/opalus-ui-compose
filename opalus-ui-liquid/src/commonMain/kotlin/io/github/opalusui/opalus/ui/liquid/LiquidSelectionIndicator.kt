@@ -71,8 +71,12 @@ internal fun LiquidSelectionIndicator(
 
     LaunchedEffect(optics.chromaticAberration, inactiveIndicatorShape, activeIndicatorShape) {
         // Let the real indicator node render its lens once before interaction.
-        // Backdrop keeps its RuntimeShader cache per drawBackdrop node, so a
-        // separate hidden warmup node would not remove the first-touch hitch.
+        // Backdrop keeps its RuntimeShader cache per drawBackdrop node.
+        // Using alpha = 0.005f ensures Compose/Skia cannot skip the draw call
+        // (which happens when alpha == 0f), forcing Skia and the GPU driver
+        // to compile the SkSL lens shader during window startup rather than
+        // freezing the main thread for ~0.5s on the user's first touch.
+        withFrameNanos { }
         withFrameNanos { }
         shaderWarmupVisible = false
     }
@@ -83,10 +87,9 @@ internal fun LiquidSelectionIndicator(
             translationX =
                 if (isLtr) state.animatedValue * tabWidth
                 else size.width - (state.animatedValue + 1f) * tabWidth
-            // The first frame is an offscreen shader warmup. Keeping the
-            // actual drawBackdrop node alive makes its cached shader available
-            // when the user performs the first click.
-            alpha = if (shaderWarmupVisible) 0f else 1f
+            // Non-zero alpha (0.005f) forces Skia to execute the draw call while
+            // remaining completely imperceptible to the human eye.
+            alpha = if (shaderWarmupVisible) 0.005f else 1f
         }
         .height(dimensions.indicatorIdleHeight)
         .fillMaxWidth(1f / tabsCount)
@@ -120,23 +123,26 @@ internal fun LiquidSelectionIndicator(
                 },
                 highlight = {
                     val visualProgress = state.pressProgress.coerceIn(0f, 1f)
+                    val effectProgress = if (shaderWarmupVisible) 1f else visualProgress
                     Highlight.Default.copy(
-                        alpha = optics.indicatorHighlightAlpha * visualProgress
+                        alpha = optics.indicatorHighlightAlpha * effectProgress
                     )
                 },
                 shadow = {
                     val visualProgress = state.pressProgress.coerceIn(0f, 1f)
+                    val effectProgress = if (shaderWarmupVisible) 1f else visualProgress
                     Shadow(
                         radius = optics.indicatorShadowRadius,
-                        offset = DpOffset(0.dp, optics.indicatorShadowOffsetY * visualProgress),
-                        alpha = optics.indicatorShadowAlpha * visualProgress
+                        offset = DpOffset(0.dp, optics.indicatorShadowOffsetY * effectProgress),
+                        alpha = optics.indicatorShadowAlpha * effectProgress
                     )
                 },
                 innerShadow = {
                     val visualProgress = state.pressProgress.coerceIn(0f, 1f)
+                    val effectProgress = if (shaderWarmupVisible) 1f else visualProgress
                     InnerShadow(
-                        radius = optics.indicatorInnerShadowRadius * visualProgress,
-                        alpha = optics.indicatorInnerShadowAlpha * visualProgress
+                        radius = optics.indicatorInnerShadowRadius * effectProgress,
+                        alpha = optics.indicatorInnerShadowAlpha * effectProgress
                     )
                 },
                 layerBlock = {
