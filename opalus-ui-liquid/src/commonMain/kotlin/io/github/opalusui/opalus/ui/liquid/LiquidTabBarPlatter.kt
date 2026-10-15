@@ -15,9 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.addOutline
@@ -159,16 +161,15 @@ internal fun <T> LiquidTabBarPlatter(
                     val currentIndicatorShape = indicatorShapeTransition.shape(state.shapeProgress)
 
                     dropletPath.reset()
-                    if (currentIndicatorShape is Capsule) {
-                        dropletPath.addRoundRect(
-                            RoundRect(
-                                left = left,
-                                top = top,
-                                right = right,
-                                bottom = bottom,
-                                radiusX = halfHeight,
-                                radiusY = halfHeight
-                            )
+                    if (currentIndicatorShape is InterpolatedIndicatorShape) {
+                        currentIndicatorShape.populatePath(
+                            path = dropletPath,
+                            left = left,
+                            top = top,
+                            right = right,
+                            bottom = bottom,
+                            layoutDirection = layoutDirection,
+                            density = this
                         )
                     } else if (currentIndicatorShape is CurvedCapsule) {
                         currentIndicatorShape.populatePath(
@@ -179,16 +180,64 @@ internal fun <T> LiquidTabBarPlatter(
                             bottom = bottom,
                             density = this
                         )
-                    } else if (currentIndicatorShape is InterpolatedIndicatorShape) {
-                        currentIndicatorShape.populatePath(
-                            path = dropletPath,
-                            left = left,
-                            top = top,
-                            right = right,
-                            bottom = bottom,
-                            layoutDirection = layoutDirection,
-                            density = this
-                        )
+                    } else if (currentIndicatorShape is Capsule) {
+                        val r = minOf(halfHeight, (right - left) / 2f).coerceAtLeast(0f)
+                        dropletPath.moveTo(left + r, top)
+                        if (right - r > left + r) {
+                            dropletPath.lineTo(right - r, top)
+                        }
+                        if (r > 0.001f) {
+                            dropletPath.arcTo(
+                                rect = Rect(right - 2f * r, top, right, top + 2f * r),
+                                startAngleDegrees = -90f,
+                                sweepAngleDegrees = 90f,
+                                forceMoveTo = false
+                            )
+                        } else {
+                            dropletPath.lineTo(right, top)
+                        }
+                        val yRightBot = bottom - r
+                        val yRightTop = top + r
+                        if (yRightBot > yRightTop + 0.001f) {
+                            dropletPath.lineTo(right, yRightBot)
+                        }
+                        if (r > 0.001f) {
+                            dropletPath.arcTo(
+                                rect = Rect(right - 2f * r, bottom - 2f * r, right, bottom),
+                                startAngleDegrees = 0f,
+                                sweepAngleDegrees = 90f,
+                                forceMoveTo = false
+                            )
+                        } else {
+                            dropletPath.lineTo(right, bottom)
+                        }
+                        if (right - r > left + r) {
+                            dropletPath.lineTo(left + r, bottom)
+                        }
+                        if (r > 0.001f) {
+                            dropletPath.arcTo(
+                                rect = Rect(left, bottom - 2f * r, left + 2f * r, bottom),
+                                startAngleDegrees = 90f,
+                                sweepAngleDegrees = 90f,
+                                forceMoveTo = false
+                            )
+                        } else {
+                            dropletPath.lineTo(left, bottom)
+                        }
+                        if (yRightBot > yRightTop + 0.001f) {
+                            dropletPath.lineTo(left, yRightTop)
+                        }
+                        if (r > 0.001f) {
+                            dropletPath.arcTo(
+                                rect = Rect(left, top, left + 2f * r, top + 2f * r),
+                                startAngleDegrees = 180f,
+                                sweepAngleDegrees = 90f,
+                                forceMoveTo = false
+                            )
+                        } else {
+                            dropletPath.lineTo(left, top)
+                        }
+                        dropletPath.close()
                     } else {
                         val dropletSize = Size(
                             width = (right - left).coerceAtLeast(0f),

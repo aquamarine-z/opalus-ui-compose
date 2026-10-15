@@ -61,6 +61,10 @@ class LiquidTabBarState(
         }
     }
 
+    suspend fun prewarm() {
+        dampedAnimation.prewarm()
+    }
+
     /**
      * 根据当前容器宽度与 maxOverhang/overhangCushion 物理参数，动态约束水滴 X 轴允许移动的绝对物理区间
      */

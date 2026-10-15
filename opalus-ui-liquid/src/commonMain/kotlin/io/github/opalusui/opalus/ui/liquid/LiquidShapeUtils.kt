@@ -64,13 +64,8 @@ internal class IndicatorShapeTransition(
 
     fun shape(progress: Float): Shape {
         val nextFraction = progress.coerceIn(0f, 1f)
-        if (nextFraction <= 0.001f || inactiveShape == activeShape) {
-            lastFraction = -1f
-            return inactiveShape
-        }
-        if (nextFraction >= 0.999f) {
-            lastFraction = -1f
-            return activeShape
+        if (!canInterpolate || inactiveShape == activeShape) {
+            return if (nextFraction < 0.5f) inactiveShape else activeShape
         }
 
         val a = shapeA
@@ -204,21 +199,6 @@ internal class InterpolatedIndicatorShape private constructor(
         val c = lerp(inactiveCurvaturePx, activeCurvaturePx, curFraction)
             .coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
 
-        if (c <= 0.1f) {
-            return Outline.Rounded(
-                RoundRect(
-                    left = 0f,
-                    top = 0f,
-                    right = w,
-                    bottom = h,
-                    topLeftCornerRadius = CornerRadius(corners.topLeft, corners.topLeft),
-                    topRightCornerRadius = CornerRadius(corners.topRight, corners.topRight),
-                    bottomRightCornerRadius = CornerRadius(corners.bottomRight, corners.bottomRight),
-                    bottomLeftCornerRadius = CornerRadius(corners.bottomLeft, corners.bottomLeft)
-                )
-            )
-        }
-
         cachedPath.reset()
         populatePath(
             path = cachedPath,
@@ -283,23 +263,6 @@ internal class InterpolatedIndicatorShape private constructor(
 
         val clampedC = c.coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
 
-        // 当曲率微小到亚像素级别时，直接按标准圆角矩形生成，彻底避免超大半径圆弧在首尾连接时产生畸变多边形
-        if (clampedC <= 0.1f) {
-            path.addRoundRect(
-                RoundRect(
-                    left = left,
-                    top = top,
-                    right = right,
-                    bottom = bottom,
-                    topLeftCornerRadius = CornerRadius(corners.topLeft, corners.topLeft),
-                    topRightCornerRadius = CornerRadius(corners.topRight, corners.topRight),
-                    bottomRightCornerRadius = CornerRadius(corners.bottomRight, corners.bottomRight),
-                    bottomLeftCornerRadius = CornerRadius(corners.bottomLeft, corners.bottomLeft)
-                )
-            )
-            return
-        }
-
         // 规范化 4 角半径，严格保持独立 4 角几何位置，绝不向垂直中心收缩塌陷
         val maxR = minOf((w / 2f).coerceAtLeast(0f), ((h - 2f * clampedC) / 2f).coerceAtLeast(0f))
         val rTL = corners.topLeft.coerceIn(0f, maxR)
@@ -310,19 +273,69 @@ internal class InterpolatedIndicatorShape private constructor(
         val wTop = (right - rTR) - (left + rTL)
         val wBot = (right - rBR) - (left + rBL)
 
-        if (wTop <= 0.001f || wBot <= 0.001f) {
-            path.addRoundRect(
-                RoundRect(
-                    left = left,
-                    top = top,
-                    right = right,
-                    bottom = bottom,
-                    topLeftCornerRadius = CornerRadius(rTL, rTL),
-                    topRightCornerRadius = CornerRadius(rTR, rTR),
-                    bottomRightCornerRadius = CornerRadius(rBR, rBR),
-                    bottomLeftCornerRadius = CornerRadius(rBL, rBL)
+        // 当曲率微小到亚像素级别或顶底宽度不足以容纳弧线时，直接以显式直线与圆角弧连续封闭，
+        // 确保 Skia 将其统一识别为通用几何路径 (kGeneral Path)，
+        // 使得 Direct3D 11 / Skiko 在首屏启动渲染时便已完成通用路径模版裁剪 (Path Stencil & Cover)
+        // 管线的预编译，彻底消除用户首次点击触摸时由于从 RRect 突变为 Bezier 路径引发的 0.5s 停顿。
+        if (clampedC <= 0.1f || wTop <= 0.001f || wBot <= 0.001f) {
+            path.moveTo(left + rTL, top)
+            if (right - rTR > left + rTL) {
+                path.lineTo(right - rTR, top)
+            }
+            if (rTR > 0.001f) {
+                path.arcTo(
+                    rect = Rect(right - 2f * rTR, top, right, top + 2f * rTR),
+                    startAngleDegrees = -90f,
+                    sweepAngleDegrees = 90f,
+                    forceMoveTo = false
                 )
-            )
+            } else {
+                path.lineTo(right, top)
+            }
+            val yRightBot = bottom - rBR
+            val yRightTop = top + rTR
+            if (yRightBot > yRightTop + 0.001f) {
+                path.lineTo(right, yRightBot)
+            }
+            if (rBR > 0.001f) {
+                path.arcTo(
+                    rect = Rect(right - 2f * rBR, bottom - 2f * rBR, right, bottom),
+                    startAngleDegrees = 0f,
+                    sweepAngleDegrees = 90f,
+                    forceMoveTo = false
+                )
+            } else {
+                path.lineTo(right, bottom)
+            }
+            if (right - rBR > left + rBL) {
+                path.lineTo(left + rBL, bottom)
+            }
+            if (rBL > 0.001f) {
+                path.arcTo(
+                    rect = Rect(left, bottom - 2f * rBL, left + 2f * rBL, bottom),
+                    startAngleDegrees = 90f,
+                    sweepAngleDegrees = 90f,
+                    forceMoveTo = false
+                )
+            } else {
+                path.lineTo(left, bottom)
+            }
+            val yLeftTop = top + rTL
+            val yLeftBot = bottom - rBL
+            if (yLeftBot > yLeftTop + 0.001f) {
+                path.lineTo(left, yLeftTop)
+            }
+            if (rTL > 0.001f) {
+                path.arcTo(
+                    rect = Rect(left, top, left + 2f * rTL, top + 2f * rTL),
+                    startAngleDegrees = 180f,
+                    sweepAngleDegrees = 90f,
+                    forceMoveTo = false
+                )
+            } else {
+                path.lineTo(left, top)
+            }
+            path.close()
             return
         }
 

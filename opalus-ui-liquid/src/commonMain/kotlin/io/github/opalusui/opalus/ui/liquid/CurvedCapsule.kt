@@ -75,21 +75,9 @@ class CurvedCapsule(
         }
 
         val c = (h / 2f - topStart).coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
-        val outline = if (c <= 0.1f) {
-            Outline.Rounded(
-                RoundRect(
-                    left = 0f,
-                    top = 0f,
-                    right = w,
-                    bottom = h,
-                    cornerRadius = CornerRadius(topStart, topStart)
-                )
-            )
-        } else {
-            cachedPath.reset()
-            populatePath(cachedPath, 0f, 0f, w, h, c)
-            Outline.Generic(cachedPath)
-        }
+        cachedPath.reset()
+        populatePath(cachedPath, 0f, 0f, w, h, c)
+        val outline = Outline.Generic(cachedPath)
 
         cachedWidth = w
         cachedHeight = h
@@ -127,34 +115,68 @@ class CurvedCapsule(
         val h = bottom - top
         if (w <= 0f || h <= 0f) return
 
-        if (c <= 0.1f) {
-            val r = (h / 2f).coerceAtLeast(0f)
-            path.addRoundRect(
-                RoundRect(
-                    left = left,
-                    top = top,
-                    right = right,
-                    bottom = bottom,
-                    cornerRadius = CornerRadius(r, r)
-                )
-            )
-            return
-        }
-
         val clampedC = c.coerceIn(0f, (h * 0.20f).coerceAtLeast(0f))
         val r = (h / 2f - clampedC).coerceAtLeast(0.001f)
         val rCap = minOf(r, w / 2f)
 
-        if (w <= 2f * rCap + 0.001f) {
-            path.addRoundRect(
-                RoundRect(
-                    left = left,
-                    top = top,
-                    right = right,
-                    bottom = bottom,
-                    cornerRadius = CornerRadius(rCap, rCap)
+        if (c <= 0.1f || w <= 2f * rCap + 0.001f) {
+            val rFlat = minOf((h / 2f).coerceAtLeast(0f), (w / 2f).coerceAtLeast(0f))
+            path.moveTo(left + rFlat, top)
+            if (right - rFlat > left + rFlat) {
+                path.lineTo(right - rFlat, top)
+            }
+            if (rFlat > 0.001f) {
+                path.arcTo(
+                    rect = Rect(right - 2f * rFlat, top, right, top + 2f * rFlat),
+                    startAngleDegrees = -90f,
+                    sweepAngleDegrees = 90f,
+                    forceMoveTo = false
                 )
-            )
+            } else {
+                path.lineTo(right, top)
+            }
+            val yRightBot = bottom - rFlat
+            val yRightTop = top + rFlat
+            if (yRightBot > yRightTop + 0.001f) {
+                path.lineTo(right, yRightBot)
+            }
+            if (rFlat > 0.001f) {
+                path.arcTo(
+                    rect = Rect(right - 2f * rFlat, bottom - 2f * rFlat, right, bottom),
+                    startAngleDegrees = 0f,
+                    sweepAngleDegrees = 90f,
+                    forceMoveTo = false
+                )
+            } else {
+                path.lineTo(right, bottom)
+            }
+            if (right - rFlat > left + rFlat) {
+                path.lineTo(left + rFlat, bottom)
+            }
+            if (rFlat > 0.001f) {
+                path.arcTo(
+                    rect = Rect(left, bottom - 2f * rFlat, left + 2f * rFlat, bottom),
+                    startAngleDegrees = 90f,
+                    sweepAngleDegrees = 90f,
+                    forceMoveTo = false
+                )
+            } else {
+                path.lineTo(left, bottom)
+            }
+            if (yRightBot > yRightTop + 0.001f) {
+                path.lineTo(left, yRightTop)
+            }
+            if (rFlat > 0.001f) {
+                path.arcTo(
+                    rect = Rect(left, top, left + 2f * rFlat, top + 2f * rFlat),
+                    startAngleDegrees = 180f,
+                    sweepAngleDegrees = 90f,
+                    forceMoveTo = false
+                )
+            } else {
+                path.lineTo(left, top)
+            }
+            path.close()
             return
         }
 

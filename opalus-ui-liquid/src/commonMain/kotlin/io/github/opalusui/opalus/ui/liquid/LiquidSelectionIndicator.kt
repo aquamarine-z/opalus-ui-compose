@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
@@ -77,7 +78,7 @@ internal fun LiquidSelectionIndicator(
                 },
                 effects = {
                     val visualProgress = state.pressProgress.coerceIn(0f, 1f)
-                    // Keep a tiny non-zero refractionAmount (0.0005f) when idle so
+                    // Keep a tiny non-zero refractionAmount (0.004f) when idle so
                     // Skia/DirectX compiles and attaches the lens RenderEffect
                     // once during window initialization. This prevents a ~0.5s EDT
                     // freeze when the user touches and drags for the first time.
@@ -88,7 +89,7 @@ internal fun LiquidSelectionIndicator(
                                 optics.indicatorRefractionHeightMax.toPx(),
                                 visualProgress
                             ),
-                            refractionAmount = optics.indicatorRefractionAmount.toPx() * visualProgress.coerceAtLeast(0.0005f),
+                            refractionAmount = optics.indicatorRefractionAmount.toPx() * visualProgress.coerceAtLeast(0.004f),
                             depthEffect = true,
                             chromaticAberration = optics.chromaticAberration
                         )
@@ -97,7 +98,7 @@ internal fun LiquidSelectionIndicator(
                 highlight = {
                     val visualProgress = state.pressProgress.coerceIn(0f, 1f)
                     Highlight.Default.copy(
-                        alpha = optics.indicatorHighlightAlpha * visualProgress
+                        alpha = (optics.indicatorHighlightAlpha * visualProgress).coerceAtLeast(0.004f)
                     )
                 },
                 shadow = {
@@ -105,17 +106,18 @@ internal fun LiquidSelectionIndicator(
                     Shadow(
                         radius = optics.indicatorShadowRadius,
                         offset = DpOffset(0.dp, optics.indicatorShadowOffsetY * visualProgress),
-                        alpha = optics.indicatorShadowAlpha * visualProgress
+                        alpha = (optics.indicatorShadowAlpha * visualProgress).coerceAtLeast(0.004f)
                     )
                 },
                 innerShadow = {
                     val visualProgress = state.pressProgress.coerceIn(0f, 1f)
                     // Keep constant blur radius so the blur ImageFilter is compiled
                     // and cached on the GraphicsLayer once at startup. Only modulate
-                    // alpha dynamically, avoiding reallocating a new BlurEffect every frame.
+                    // alpha dynamically, with a 0.004f floor to ensure Direct3D compiles
+                    // the inner shadow blur effect on window load.
                     InnerShadow(
                         radius = optics.indicatorInnerShadowRadius,
-                        alpha = optics.indicatorInnerShadowAlpha * visualProgress
+                        alpha = (optics.indicatorInnerShadowAlpha * visualProgress).coerceAtLeast(0.004f)
                     )
                 },
                 layerBlock = {
@@ -168,59 +170,110 @@ internal fun LiquidSelectionIndicator(
             // do not recompose the indicator's backdrop pipeline.
             .drawWithContent {
                 drawContent()
-                val alpha = state.pressProgress.coerceIn(0f, 1f)
                 val strokeWidth = dimensions.indicatorBorderWidth.toPx()
-                if (alpha > 0.001f && strokeWidth > 0f) {
+                if (strokeWidth > 0f) {
                     val inset = strokeWidth / 2f
                     val borderSize = Size(
                         width = (size.width - strokeWidth).coerceAtLeast(0f),
                         height = (size.height - strokeWidth).coerceAtLeast(0f)
                     )
+                    val alpha = state.pressProgress.coerceIn(0f, 1f)
                     val currentShape = indicatorShapeTransition.shape(state.shapeProgress)
-                    if (currentShape is Capsule) {
-                        drawRoundRect(
-                            color = colors.indicatorBorderColor.copy(
-                                alpha = colors.indicatorBorderColor.alpha * alpha
-                            ),
-                            topLeft = Offset(inset, inset),
-                            size = borderSize,
-                            cornerRadius = CornerRadius(borderSize.height / 2f, borderSize.height / 2f),
-                            style = Stroke(width = strokeWidth)
+                    borderPath.reset()
+                    if (currentShape is InterpolatedIndicatorShape) {
+                        currentShape.populatePath(
+                            path = borderPath,
+                            left = inset,
+                            top = inset,
+                            right = inset + borderSize.width,
+                            bottom = inset + borderSize.height,
+                            layoutDirection = layoutDirection,
+                            density = this
                         )
-                    } else {
-                        borderPath.reset()
-                        if (currentShape is CurvedCapsule) {
-                            currentShape.populatePath(
-                                path = borderPath,
-                                left = inset,
-                                top = inset,
-                                right = inset + borderSize.width,
-                                bottom = inset + borderSize.height,
-                                density = this
-                            )
-                        } else if (currentShape is InterpolatedIndicatorShape) {
-                            currentShape.populatePath(
-                                path = borderPath,
-                                left = inset,
-                                top = inset,
-                                right = inset + borderSize.width,
-                                bottom = inset + borderSize.height,
-                                layoutDirection = layoutDirection,
-                                density = this
+                    } else if (currentShape is CurvedCapsule) {
+                        currentShape.populatePath(
+                            path = borderPath,
+                            left = inset,
+                            top = inset,
+                            right = inset + borderSize.width,
+                            bottom = inset + borderSize.height,
+                            density = this
+                        )
+                    } else if (currentShape is Capsule) {
+                        val r = minOf(borderSize.height / 2f, borderSize.width / 2f).coerceAtLeast(0f)
+                        val left = inset
+                        val top = inset
+                        val right = inset + borderSize.width
+                        val bottom = inset + borderSize.height
+                        borderPath.moveTo(left + r, top)
+                        if (right - r > left + r) {
+                            borderPath.lineTo(right - r, top)
+                        }
+                        if (r > 0.001f) {
+                            borderPath.arcTo(
+                                rect = Rect(right - 2f * r, top, right, top + 2f * r),
+                                startAngleDegrees = -90f,
+                                sweepAngleDegrees = 90f,
+                                forceMoveTo = false
                             )
                         } else {
-                            val borderOutline = currentShape.createOutline(borderSize, layoutDirection, this)
-                            borderPath.addOutline(borderOutline)
-                            borderPath.translate(Offset(inset, inset))
+                            borderPath.lineTo(right, top)
                         }
-                        drawPath(
-                            path = borderPath,
-                            color = colors.indicatorBorderColor.copy(
-                                alpha = colors.indicatorBorderColor.alpha * alpha
-                            ),
-                            style = Stroke(width = strokeWidth)
-                        )
+                        val yRightBot = bottom - r
+                        val yRightTop = top + r
+                        if (yRightBot > yRightTop + 0.001f) {
+                            borderPath.lineTo(right, yRightBot)
+                        }
+                        if (r > 0.001f) {
+                            borderPath.arcTo(
+                                rect = Rect(right - 2f * r, bottom - 2f * r, right, bottom),
+                                startAngleDegrees = 0f,
+                                sweepAngleDegrees = 90f,
+                                forceMoveTo = false
+                            )
+                        } else {
+                            borderPath.lineTo(right, bottom)
+                        }
+                        if (right - r > left + r) {
+                            borderPath.lineTo(left + r, bottom)
+                        }
+                        if (r > 0.001f) {
+                            borderPath.arcTo(
+                                rect = Rect(left, bottom - 2f * r, left + 2f * r, bottom),
+                                startAngleDegrees = 90f,
+                                sweepAngleDegrees = 90f,
+                                forceMoveTo = false
+                            )
+                        } else {
+                            borderPath.lineTo(left, bottom)
+                        }
+                        if (yRightBot > yRightTop + 0.001f) {
+                            borderPath.lineTo(left, yRightTop)
+                        }
+                        if (r > 0.001f) {
+                            borderPath.arcTo(
+                                rect = Rect(left, top, left + 2f * r, top + 2f * r),
+                                startAngleDegrees = 180f,
+                                sweepAngleDegrees = 90f,
+                                forceMoveTo = false
+                            )
+                        } else {
+                            borderPath.lineTo(left, top)
+                        }
+                        borderPath.close()
+                    } else {
+                        val borderOutline = currentShape.createOutline(borderSize, layoutDirection, this)
+                        borderPath.addOutline(borderOutline)
+                        borderPath.translate(Offset(inset, inset))
                     }
+                    val effectiveAlpha = (colors.indicatorBorderColor.alpha * alpha).coerceAtLeast(0.004f)
+                    drawPath(
+                        path = borderPath,
+                        color = colors.indicatorBorderColor.copy(
+                            alpha = effectiveAlpha
+                        ),
+                        style = Stroke(width = strokeWidth)
+                    )
                 }
             }
     )

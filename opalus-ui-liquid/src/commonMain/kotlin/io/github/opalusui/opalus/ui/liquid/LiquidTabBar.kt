@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,31 +18,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.foundation.layout.size
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.ClipOp
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.addOutline
-import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.unit.DpOffset
-import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.emptyBackdrop
-import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.shadow.InnerShadow
-import com.kyant.backdrop.shadow.Shadow
 import com.kyant.shapes.Capsule
 
 /**
@@ -73,6 +52,10 @@ fun <T> LiquidTabBar(
     SideEffect {
         state.updatePhysics(physics)
         state.updateEvents(events)
+    }
+
+    LaunchedEffect(state) {
+        state.prewarm()
     }
 
     val dockBackdrop = rememberLayerBackdrop()
@@ -151,16 +134,6 @@ fun <T> LiquidTabBar(
                     },
                 contentAlignment = Alignment.CenterStart
             ) {
-                // 0. 静默管线预热器：在初次挂载时以 0 视觉开销预热 Skia GPU 通用路径裁切与 Lens 渲染管线，
-                // 彻底杜绝首次点击时 0.5s 的 Direct3D/Vulkan 着色器冷编译卡顿。
-                LiquidPipelineWarmer(
-                    backdrop = backdrop,
-                    dockBackdrop = dockBackdrop,
-                    activeButtonsBackdrop = activeButtonsBackdrop,
-                    activeIndicatorShape = activeIndicatorShape,
-                    optics = optics
-                )
-
                 // 1. 底层：全局唯一实体底盘胶囊 (录制为 dockBackdrop) + 非激活态按钮 (反向几何遮罩剔除水滴覆盖区)
                 LiquidTabBarPlatter(
                     dockBackdrop = dockBackdrop,
@@ -251,100 +224,4 @@ fun LiquidTabBar(
         inactiveItem = { _, item -> item.inactive() },
         activeItem = { _, item -> item.active() }
     )
-}
-
-/**
- * 离屏渲染管线静默预热器。
- *
- * 在初次挂载时以 0 像素可见度（alpha = 0.005f，经 8-bit 色彩量化后严格截断为 0 纯透明）
- * 触发一次 Skia GPU 的通用路径裁切（Path Difference Clip）与 Lens 透镜着色器评估。
- * 促使 Direct3D/Metal/Vulkan 驱动在页面刚展示的空闲帧提前完成着色器冷编译与 PSO 显存缓存，
- * 并在 2 帧后完全卸载，从而在不损失任何微弧质感与视觉体验的前提下，彻底消除首次交互的 0.5s 停顿。
- */
-@Composable
-private fun LiquidPipelineWarmer(
-    backdrop: Backdrop,
-    dockBackdrop: Backdrop,
-    activeButtonsBackdrop: Backdrop,
-    activeIndicatorShape: Shape,
-    optics: LiquidTabBarOptics
-) {
-    var isWarmedUp by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        // 预热 Compose MonotonicFrameClock 与协程调度环
-        withFrameNanos { }
-        withFrameNanos { }
-        isWarmedUp = true
-    }
-
-    if (!isWarmedUp) {
-        val combinedBackdrop = rememberCombinedBackdrop(backdrop, dockBackdrop, activeButtonsBackdrop)
-        val warmerPath = remember { Path() }
-        val lensSupported = activeIndicatorShape.supportsLiquidLens()
-
-        Box(
-            modifier = Modifier
-                .size(4.dp)
-                .graphicsLayer {
-                    alpha = 0.005f
-                }
-                .drawWithContent {
-                    warmerPath.reset()
-                    if (activeIndicatorShape is CurvedCapsule) {
-                        activeIndicatorShape.populatePath(
-                            path = warmerPath,
-                            left = 0f,
-                            top = 0f,
-                            right = size.width,
-                            bottom = size.height,
-                            density = this
-                        )
-                    } else if (activeIndicatorShape is InterpolatedIndicatorShape) {
-                        activeIndicatorShape.populatePath(
-                            path = warmerPath,
-                            left = 0f,
-                            top = 0f,
-                            right = size.width,
-                            bottom = size.height,
-                            layoutDirection = layoutDirection,
-                            density = this
-                        )
-                    } else {
-                        val outline = activeIndicatorShape.createOutline(size, layoutDirection, this)
-                        warmerPath.addOutline(outline)
-                    }
-                    clipPath(warmerPath, clipOp = ClipOp.Difference) {
-                        drawRect(Color.Transparent)
-                    }
-                }
-                .drawBackdrop(
-                    backdrop = combinedBackdrop,
-                    shape = { activeIndicatorShape },
-                    effects = {
-                        if (lensSupported) {
-                            lens(
-                                refractionHeight = optics.indicatorRefractionHeightMax.toPx(),
-                                refractionAmount = optics.indicatorRefractionAmount.toPx(),
-                                depthEffect = true,
-                                chromaticAberration = optics.chromaticAberration
-                            )
-                        }
-                    },
-                    shadow = {
-                        Shadow(
-                            radius = optics.indicatorShadowRadius,
-                            offset = DpOffset(0.dp, optics.indicatorShadowOffsetY),
-                            alpha = 0.01f
-                        )
-                    },
-                    innerShadow = {
-                        InnerShadow(
-                            radius = optics.indicatorInnerShadowRadius,
-                            alpha = 0.01f
-                        )
-                    }
-                )
-        )
-    }
 }

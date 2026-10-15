@@ -3,6 +3,7 @@ package io.github.opalusui.opalus.ui.liquid
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.SpringSpec
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -140,9 +141,47 @@ class DampedDragAnimation(
 
     private var pressJob: Job? = null
     private var snapJob: Job? = null
+    private var prewarmJob: Job? = null
     private var animationToken: Long = 0L
 
+    suspend fun prewarm() {
+        if (isDragging) return
+        coroutineScope {
+            val job = launch {
+                withFrameNanos { }
+                // 1. 预热所有弹簧与补间动画向量化求值器及 JVM 类加载 (Zero GC, Zero JIT hitch on first touch)
+                growProgressAnimationSpec.vectorize(Float.VectorConverter)
+                shrinkProgressAnimationSpec.vectorize(Float.VectorConverter)
+                scaleXGrowSpec.vectorize(Float.VectorConverter)
+                scaleXShrinkSpec.vectorize(Float.VectorConverter)
+                scaleYGrowSpec.vectorize(Float.VectorConverter)
+                scaleYShrinkSpec.vectorize(Float.VectorConverter)
+                dragAnimationSpec.vectorize(Float.VectorConverter)
+                dockingAnimationSpec.vectorize(Float.VectorConverter)
+                velocityAnimationSpec.vectorize(Float.VectorConverter)
+
+                // 2. 调度微帧：将 Animatable 与 GraphicsLayer 缩放参数微调 0.001f 并等待 1 帧绘制，
+                // 确保 Direct3D 11 / Skiko 完成非恒等缩放矩阵 (scale != 1.0f) 的 RenderTarget 及变换图层构建，
+                // 随后立即微调回静止态并提交，保证首屏在用户交互前彻底完成所有 GPU 图层管线预热。
+                pressProgressAnimation.snapTo(0.001f)
+                shapeProgressAnimation.snapTo(0.001f)
+                scaleXAnimation.snapTo(initialScale + 0.0001f)
+                scaleYAnimation.snapTo(initialScale + 0.0001f)
+                withFrameNanos { }
+
+                pressProgressAnimation.snapTo(0f)
+                shapeProgressAnimation.snapTo(0f)
+                scaleXAnimation.snapTo(initialScale)
+                scaleYAnimation.snapTo(initialScale)
+                withFrameNanos { }
+            }
+            prewarmJob = job
+            job.join()
+        }
+    }
+
     fun press() {
+        prewarmJob?.cancel()
         snapJob?.cancel()
         pressJob?.cancel()
         dragJob?.cancel()
