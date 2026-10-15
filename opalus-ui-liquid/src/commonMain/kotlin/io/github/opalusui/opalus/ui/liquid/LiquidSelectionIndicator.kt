@@ -5,27 +5,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
-import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.lerp
-import androidx.compose.runtime.withFrameNanos
 import kotlin.math.abs
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
@@ -63,23 +57,6 @@ internal fun LiquidSelectionIndicator(
         activeShape = activeIndicatorShape
     )
     val borderPath = remember { Path() }
-    var shaderWarmupVisible by remember(
-        optics.chromaticAberration,
-        inactiveIndicatorShape,
-        activeIndicatorShape
-    ) { mutableStateOf(true) }
-
-    LaunchedEffect(optics.chromaticAberration, inactiveIndicatorShape, activeIndicatorShape) {
-        // Let the real indicator node render its lens once before interaction.
-        // Backdrop keeps its RuntimeShader cache per drawBackdrop node.
-        // Using alpha = 0.005f ensures Compose/Skia cannot skip the draw call
-        // (which happens when alpha == 0f), forcing Skia and the GPU driver
-        // to compile the SkSL lens shader during window startup rather than
-        // freezing the main thread for ~0.5s on the user's first touch.
-        withFrameNanos { }
-        withFrameNanos { }
-        shaderWarmupVisible = false
-    }
 
     val indicatorModifier = modifier
         .padding(horizontal = dimensions.horizontalPadding)
@@ -87,9 +64,6 @@ internal fun LiquidSelectionIndicator(
             translationX =
                 if (isLtr) state.animatedValue * tabWidth
                 else size.width - (state.animatedValue + 1f) * tabWidth
-            // Non-zero alpha (0.005f) forces Skia to execute the draw call while
-            // remaining completely imperceptible to the human eye.
-            alpha = if (shaderWarmupVisible) 0.005f else 1f
         }
         .height(dimensions.indicatorIdleHeight)
         .fillMaxWidth(1f / tabsCount)
@@ -99,23 +73,22 @@ internal fun LiquidSelectionIndicator(
             .drawBackdrop(
                 backdrop = combinedBackdrop,
                 shape = {
-                    indicatorShapeTransition.shape(
-                        if (shaderWarmupVisible) 1f else state.shapeProgress
-                    )
+                    indicatorShapeTransition.shape(state.shapeProgress)
                 },
                 effects = {
                     val visualProgress = state.pressProgress.coerceIn(0f, 1f)
-                    val effectProgress = if (shaderWarmupVisible) 1f else visualProgress
-                    // A zero-strength lens still changes backdrop sampling on
-                    // WASM. Keep the inactive indicator as a plain glass fill.
-                    if (lensSupported && effectProgress > 0.001f) {
+                    // Keep a tiny non-zero refractionAmount (0.0005f) when idle so
+                    // Skia/DirectX compiles and attaches the lens RenderEffect
+                    // once during window initialization. This prevents a ~0.5s EDT
+                    // freeze when the user touches and drags for the first time.
+                    if (lensSupported) {
                         lens(
                             refractionHeight = lerp(
                                 optics.indicatorRefractionHeightMin.toPx(),
                                 optics.indicatorRefractionHeightMax.toPx(),
-                                effectProgress
+                                visualProgress
                             ),
-                            refractionAmount = optics.indicatorRefractionAmount.toPx() * effectProgress,
+                            refractionAmount = optics.indicatorRefractionAmount.toPx() * visualProgress.coerceAtLeast(0.0005f),
                             depthEffect = true,
                             chromaticAberration = optics.chromaticAberration
                         )
@@ -123,26 +96,26 @@ internal fun LiquidSelectionIndicator(
                 },
                 highlight = {
                     val visualProgress = state.pressProgress.coerceIn(0f, 1f)
-                    val effectProgress = if (shaderWarmupVisible) 1f else visualProgress
                     Highlight.Default.copy(
-                        alpha = optics.indicatorHighlightAlpha * effectProgress
+                        alpha = optics.indicatorHighlightAlpha * visualProgress
                     )
                 },
                 shadow = {
                     val visualProgress = state.pressProgress.coerceIn(0f, 1f)
-                    val effectProgress = if (shaderWarmupVisible) 1f else visualProgress
                     Shadow(
                         radius = optics.indicatorShadowRadius,
-                        offset = DpOffset(0.dp, optics.indicatorShadowOffsetY * effectProgress),
-                        alpha = optics.indicatorShadowAlpha * effectProgress
+                        offset = DpOffset(0.dp, optics.indicatorShadowOffsetY * visualProgress),
+                        alpha = optics.indicatorShadowAlpha * visualProgress
                     )
                 },
                 innerShadow = {
                     val visualProgress = state.pressProgress.coerceIn(0f, 1f)
-                    val effectProgress = if (shaderWarmupVisible) 1f else visualProgress
+                    // Keep constant blur radius so the blur ImageFilter is compiled
+                    // and cached on the GraphicsLayer once at startup. Only modulate
+                    // alpha dynamically, avoiding reallocating a new BlurEffect every frame.
                     InnerShadow(
-                        radius = optics.indicatorInnerShadowRadius * effectProgress,
-                        alpha = optics.indicatorInnerShadowAlpha * effectProgress
+                        radius = optics.indicatorInnerShadowRadius,
+                        alpha = optics.indicatorInnerShadowAlpha * visualProgress
                     )
                 },
                 layerBlock = {
